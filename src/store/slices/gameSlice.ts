@@ -3,6 +3,7 @@ import {
   GamePhase,
   BlindType,
   PlayingCard,
+  SortCriterion,
 } from "@/types";
 import {
   MAX_HAND_SIZE,
@@ -12,7 +13,14 @@ import {
   INITIAL_MONEY,
   ANTE_BASE_TARGETS,
 } from "@/lib/constants";
-import { generateStandardDeck, shuffleDeck } from "@/lib/deck";
+import {
+  createStandardDeck,
+  shuffleDeck,
+  dealInitialHand,
+  drawCards,
+  discardCards,
+  sortCards,
+} from "@/features/poker/services/deck.service";
 import type { ScoreSlice } from "./scoreSlice";
 import type { JokerSlice } from "./jokerSlice";
 
@@ -24,17 +32,19 @@ export interface GameSlice {
   handsRemaining: number;
   discardsRemaining: number;
   money: number;
+  seed?: string;
   deck: PlayingCard[];
   hand: PlayingCard[];
   selectedCardIds: string[];
   discardPile: PlayingCard[];
 
   // Actions
-  startGame: () => void;
+  startGame: (seed?: string) => void;
   toggleCardSelection: (cardId: string) => void;
   clearSelection: () => void;
   discardSelectedCards: () => void;
   drawCards: (count?: number) => void;
+  sortHand: (criterion: SortCriterion) => void;
   setPhase: (phase: GamePhase) => void;
   addMoney: (amount: number) => void;
   spendMoney: (amount: number) => boolean;
@@ -58,15 +68,16 @@ export const createGameSlice: StateCreator<
   handsRemaining: INITIAL_HANDS,
   discardsRemaining: INITIAL_DISCARDS,
   money: INITIAL_MONEY,
+  seed: undefined,
   deck: [],
   hand: [],
   selectedCardIds: [],
   discardPile: [],
 
-  startGame: () => {
-    const fullDeck = shuffleDeck(generateStandardDeck());
-    const initialHand = fullDeck.slice(0, MAX_HAND_SIZE);
-    const remainingDeck = fullDeck.slice(MAX_HAND_SIZE);
+  startGame: (seed?: string) => {
+    const rawDeck = createStandardDeck();
+    const shuffled = shuffleDeck(rawDeck, seed);
+    const { hand: initialHand, remainingDeck } = dealInitialHand(shuffled, MAX_HAND_SIZE);
 
     set({
       phase: "playing",
@@ -76,13 +87,13 @@ export const createGameSlice: StateCreator<
       handsRemaining: INITIAL_HANDS,
       discardsRemaining: INITIAL_DISCARDS,
       money: INITIAL_MONEY,
+      seed,
       deck: remainingDeck,
       hand: initialHand,
       selectedCardIds: [],
       discardPile: [],
     });
 
-    // Also update target score in score slice
     get().setTargetScore(ANTE_BASE_TARGETS[1].small);
     get().resetRoundScore();
   },
@@ -120,33 +131,39 @@ export const createGameSlice: StateCreator<
       return;
     }
 
-    const discardedCards = hand.filter((c) => selectedCardIds.includes(c.id));
-    const keptCards = hand.filter((c) => !selectedCardIds.includes(c.id));
-    const drawCount = selectedCardIds.length;
-    const drawnCards = deck.slice(0, drawCount);
-    const newDeck = deck.slice(drawCount);
+    const {
+      hand: keptHand,
+      discardPile: newDiscardPile,
+    } = discardCards(hand, discardPile, selectedCardIds);
+
+    const {
+      hand: replenishedHand,
+      remainingDeck,
+    } = drawCards(keptHand, deck, selectedCardIds.length);
 
     set({
       discardsRemaining: discardsRemaining - 1,
-      hand: [...keptCards, ...drawnCards],
-      deck: newDeck,
-      discardPile: [...discardPile, ...discardedCards],
+      hand: replenishedHand,
+      deck: remainingDeck,
+      discardPile: newDiscardPile,
       selectedCardIds: [],
     });
   },
 
   drawCards: (count?: number) => {
     const { hand, deck } = get();
-    const needed = count ?? Math.max(0, MAX_HAND_SIZE - hand.length);
-    if (needed <= 0 || deck.length === 0) return;
-
-    const drawn = deck.slice(0, needed);
-    const newDeck = deck.slice(needed);
+    const { hand: newHand, remainingDeck } = drawCards(hand, deck, count);
 
     set({
-      hand: [...hand, ...drawn],
-      deck: newDeck,
+      hand: newHand,
+      deck: remainingDeck,
     });
+  },
+
+  sortHand: (criterion: SortCriterion) => {
+    const { hand } = get();
+    const sorted = sortCards(hand, criterion);
+    set({ hand: sorted });
   },
 
   setPhase: (phase: GamePhase) => {
@@ -172,7 +189,7 @@ export const createGameSlice: StateCreator<
   },
 
   advanceToNextBlind: () => {
-    const { round, ante, deck, hand, discardPile } = get();
+    const { round, ante, deck, hand, discardPile, seed } = get();
     let nextRound = round + 1;
     let nextAnte = ante;
     let nextBlind: BlindType = "big";
@@ -187,10 +204,10 @@ export const createGameSlice: StateCreator<
       nextBlind = "small";
     }
 
-    // Recombine and reshuffle all cards
-    const allCards = shuffleDeck([...deck, ...hand, ...discardPile]);
-    const nextHand = allCards.slice(0, MAX_HAND_SIZE);
-    const remainingDeck = allCards.slice(MAX_HAND_SIZE);
+    // Recombine all cards and reshuffle
+    const allCards = [...deck, ...hand, ...discardPile];
+    const reshuffled = shuffleDeck(allCards, seed ? `${seed}-${nextAnte}-${nextRound}` : undefined);
+    const { hand: nextHand, remainingDeck } = dealInitialHand(reshuffled, MAX_HAND_SIZE);
 
     const anteTargets = ANTE_BASE_TARGETS[Math.min(nextAnte, 8)];
     const targetScore =
@@ -226,6 +243,7 @@ export const createGameSlice: StateCreator<
       handsRemaining: INITIAL_HANDS,
       discardsRemaining: INITIAL_DISCARDS,
       money: INITIAL_MONEY,
+      seed: undefined,
       deck: [],
       hand: [],
       selectedCardIds: [],

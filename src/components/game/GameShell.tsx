@@ -13,6 +13,8 @@ import {
   Info,
   Layers,
   Coins,
+  ArrowUpDown,
+  Shuffle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +71,7 @@ export function GameShell() {
   const startGame = useGameStore((state) => state.startGame);
   const toggleCardSelection = useGameStore((state) => state.toggleCardSelection);
   const discardSelected = useGameStore((state) => state.discardSelectedCards);
+  const sortHand = useGameStore((state) => state.sortHand);
   const resetGame = useGameStore((state) => state.resetGame);
 
   const scoreProgress = Math.min(100, Math.round((roundScore / (targetScore || 1)) * 100));
@@ -258,7 +261,7 @@ export function GameShell() {
               <Button
                 variant="balatroBlue"
                 size="lg"
-                onClick={startGame}
+                onClick={() => startGame()}
                 className="w-full text-lg py-6 font-black tracking-widest"
               >
                 PLAY RUN
@@ -376,12 +379,35 @@ export function GameShell() {
             </div>
 
             {/* HAND OF CARDS RACK */}
-            <div className="w-full flex flex-col items-center gap-4">
+            <div className="w-full flex flex-col items-center gap-3">
+              {/* Hand Utilities / Sorting */}
+              <div className="flex items-center gap-2 self-center text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => sortHand("rank")}
+                  className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-300"
+                >
+                  <ArrowUpDown className="w-3 h-3 mr-1 text-amber-400" /> Sort Rank
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => sortHand("suit")}
+                  className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-300"
+                >
+                  <Shuffle className="w-3 h-3 mr-1 text-blue-400" /> Sort Suit
+                </Button>
+              </div>
+
+              {/* Cards Rack */}
               <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap max-w-4xl px-2">
                 <AnimatePresence>
                   {hand.map((card) => {
                     const isSelected = selectedIds.includes(card.id);
                     const isRedSuit = card.suit === "hearts" || card.suit === "diamonds";
+                    const hasSpecialEdition = card.edition !== "base";
+                    const hasEnhancement = card.enhancement !== "none";
 
                     return (
                       <motion.button
@@ -392,17 +418,35 @@ export function GameShell() {
                         whileTap={{ scale: 0.95 }}
                         animate={{
                           y: isSelected ? -20 : 0,
-                          borderColor: isSelected ? "#38bdf8" : "#2a3439",
+                          borderColor: isSelected
+                            ? "#38bdf8"
+                            : hasSpecialEdition
+                            ? "#a855f7"
+                            : "#2a3439",
                         }}
                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                        className={`w-14 h-22 sm:w-18 sm:h-28 rounded-lg bg-[#f6f3e8] border-2 shadow-md flex flex-col justify-between p-2 cursor-pointer transition-shadow ${
+                        className={`w-14 h-22 sm:w-18 sm:h-28 rounded-lg bg-[#f6f3e8] border-2 shadow-md flex flex-col justify-between p-1.5 sm:p-2 cursor-pointer transition-shadow relative ${
                           isSelected
                             ? "shadow-blue-500/50 ring-2 ring-blue-400 shadow-xl"
                             : "hover:shadow-lg"
+                        } ${
+                          card.isDebuffed ? "opacity-60 grayscale" : ""
                         }`}
                       >
+                        {/* Edition / Seal Indicator Badge */}
+                        {hasSpecialEdition && (
+                          <span className="absolute -top-2 -right-1 px-1 py-0.2 text-[8px] font-extrabold rounded bg-purple-600 text-white uppercase shadow-sm">
+                            {card.edition}
+                          </span>
+                        )}
+                        {card.seal !== "none" && (
+                          <span className="absolute -top-2 -left-1 px-1 py-0.2 text-[8px] font-extrabold rounded bg-amber-500 text-slate-950 uppercase shadow-sm">
+                            {card.seal}
+                          </span>
+                        )}
+
                         <div className="flex items-center justify-between w-full">
-                          <span className={`text-sm font-black ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
+                          <span className={`text-xs sm:text-sm font-black ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
                             {card.rank}
                           </span>
                           <span className={`text-xs ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
@@ -417,7 +461,7 @@ export function GameShell() {
                         </div>
 
                         <div
-                          className={`text-2xl sm:text-3xl self-center font-bold ${
+                          className={`text-xl sm:text-3xl self-center font-bold ${
                             isRedSuit ? "text-red-600" : "text-slate-900"
                           }`}
                         >
@@ -429,6 +473,12 @@ export function GameShell() {
                             ? "♣"
                             : "♠"}
                         </div>
+
+                        {hasEnhancement && (
+                          <div className="text-[8px] font-bold text-amber-800 bg-amber-200/80 rounded px-1 text-center uppercase truncate">
+                            {card.enhancement}
+                          </div>
+                        )}
 
                         <div className="flex items-center justify-between w-full text-[10px] font-mono">
                           <span className="text-blue-700 font-bold">+{card.chipValue}</span>

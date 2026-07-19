@@ -1,48 +1,35 @@
-export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
+import type {
+  CardSuit,
+  CardRank,
+  CardEnhancement,
+  CardEdition,
+  CardSeal,
+  PlayingCard,
+} from "@/features/poker/schemas/card.schema";
 
-export type CardRank =
-  | "2"
-  | "3"
-  | "4"
-  | "5"
-  | "6"
-  | "7"
-  | "8"
-  | "9"
-  | "10"
-  | "J"
-  | "Q"
-  | "K"
-  | "A";
+import type {
+  Deck,
+  SortCriterion,
+  CardSelectionPayload,
+  DiscardPayload,
+  PlayHandPayload,
+  DrawPayload,
+} from "@/features/poker/schemas/deck.schema";
 
-export type CardEnhancement =
-  | "none"
-  | "bonus" // +30 extra chips
-  | "mult" // +4 extra mult
-  | "wild" // Counts as any suit
-  | "glass" // X2 Mult, 1 in 4 chance to destroy
-  | "steel" // X1.5 Mult while held in hand
-  | "stone" // +50 Chips, no rank or suit
-  | "gold"; // +$3 if held in hand at end of round
-
-export type CardEdition =
-  | "base"
-  | "foil" // +50 Chips
-  | "holographic" // +10 Mult
-  | "polychrome"; // X1.5 Mult
-
-export type CardSeal = "none" | "gold" | "red" | "blue" | "purple";
-
-export interface PlayingCard {
-  id: string;
-  suit: CardSuit;
-  rank: CardRank;
-  chipValue: number;
-  enhancement: CardEnhancement;
-  edition: CardEdition;
-  seal: CardSeal;
-  isDebuffed?: boolean;
-}
+export type {
+  CardSuit,
+  CardRank,
+  CardEnhancement,
+  CardEdition,
+  CardSeal,
+  PlayingCard,
+  Deck,
+  SortCriterion,
+  CardSelectionPayload,
+  DiscardPayload,
+  PlayHandPayload,
+  DrawPayload,
+};
 
 export type PokerHandName =
   | "High Card"
