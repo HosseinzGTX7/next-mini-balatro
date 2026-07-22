@@ -16,6 +16,13 @@ import type {
   DrawPayload,
 } from "@/features/poker/schemas/deck.schema";
 
+import type {
+  PokerHandName,
+  ScoringStepEvent,
+  HandEvaluationResult,
+  HandScoreBreakdown,
+} from "@/features/scoring/schemas/scoring.schema";
+
 export type {
   CardSuit,
   CardRank,
@@ -29,22 +36,11 @@ export type {
   DiscardPayload,
   PlayHandPayload,
   DrawPayload,
+  PokerHandName,
+  ScoringStepEvent,
+  HandEvaluationResult,
+  HandScoreBreakdown,
 };
-
-export type PokerHandName =
-  | "High Card"
-  | "Pair"
-  | "Two Pair"
-  | "Three of a Kind"
-  | "Straight"
-  | "Flush"
-  | "Full House"
-  | "Four of a Kind"
-  | "Straight Flush"
-  | "Royal Flush"
-  | "Five of a Kind"
-  | "Flush House"
-  | "Flush Five";
 
 export interface HandLevelData {
   level: number;

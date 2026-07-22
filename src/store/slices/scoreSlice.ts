@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand";
-import { PokerHandName, HandLevelData } from "@/types";
+import { PokerHandName, HandLevelData, PlayingCard, JokerItem } from "@/types";
 import { BASE_POKER_HANDS } from "@/lib/constants";
+import { calculateHandScore } from "@/features/scoring/services/scoring-engine.service";
 import type { CombinedStore } from "./gameSlice";
 
 export interface ScoreSlice {
@@ -17,6 +18,11 @@ export interface ScoreSlice {
   addRoundScore: (points: number) => void;
   setHandChipsAndMult: (chips: number, mult: number) => void;
   setActivePokerHand: (handName: PokerHandName | null) => void;
+  updateScorePreview: (
+    selectedCards: PlayingCard[],
+    heldCards: PlayingCard[],
+    jokers?: JokerItem[]
+  ) => void;
   levelUpHand: (
     handName: PokerHandName,
     chipsDelta?: number,
@@ -31,7 +37,7 @@ export const createScoreSlice: StateCreator<
   [],
   [],
   ScoreSlice
-> = (set) => ({
+> = (set, get) => ({
   roundScore: 0,
   targetScore: 300,
   currentHandChips: 0,
@@ -57,6 +63,35 @@ export const createScoreSlice: StateCreator<
 
   setActivePokerHand: (handName: PokerHandName | null) => {
     set({ activePokerHand: handName });
+  },
+
+  updateScorePreview: (
+    selectedCards: PlayingCard[],
+    heldCards: PlayingCard[],
+    jokers = []
+  ) => {
+    if (selectedCards.length === 0) {
+      set({
+        currentHandChips: 0,
+        currentHandMult: 0,
+        activePokerHand: null,
+      });
+      return;
+    }
+
+    const { handLevels } = get();
+    const result = calculateHandScore({
+      playedCards: selectedCards,
+      heldCards,
+      handLevels,
+      jokers,
+    });
+
+    set({
+      currentHandChips: result.finalChips,
+      currentHandMult: result.finalMult,
+      activePokerHand: result.evaluation.handName,
+    });
   },
 
   levelUpHand: (

@@ -39,6 +39,7 @@ import {
   useTargetScore,
   useHandChips,
   useHandMult,
+  useActivePokerHand,
   useJokers,
   useMaxJokers,
   useHand,
@@ -59,6 +60,7 @@ export function GameShell() {
   const targetScore = useTargetScore();
   const chips = useHandChips();
   const mult = useHandMult();
+  const activePokerHand = useActivePokerHand();
   const jokers = useJokers();
   const maxJokers = useMaxJokers();
   const hand = useHand();
@@ -71,6 +73,8 @@ export function GameShell() {
   const startGame = useGameStore((state) => state.startGame);
   const toggleCardSelection = useGameStore((state) => state.toggleCardSelection);
   const discardSelected = useGameStore((state) => state.discardSelectedCards);
+  const playSelectedHand = useGameStore((state) => state.playSelectedHand);
+  const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
   const sortHand = useGameStore((state) => state.sortHand);
   const resetGame = useGameStore((state) => state.resetGame);
 
@@ -313,16 +317,19 @@ export function GameShell() {
               </div>
 
               {/* Hand Score Preview (Chips X Mult) */}
-              <div className="flex items-center justify-center gap-3 pl-4">
+              <div className="flex flex-col items-center justify-center gap-1 pl-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                  {activePokerHand || "Select Cards"}
+                </span>
                 <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-lg bg-blue-950/80 border border-blue-500/60 text-center">
-                    <span className="text-[10px] uppercase font-bold text-blue-300 block">Chips</span>
-                    <span className="text-lg font-black text-[#009dff]">{chips}</span>
+                  <div className="px-3 py-1 rounded-lg bg-blue-950/80 border border-blue-500/60 text-center min-w-[55px]">
+                    <span className="text-[9px] uppercase font-bold text-blue-300 block">Chips</span>
+                    <span className="text-base font-black text-[#009dff]">{chips}</span>
                   </div>
-                  <span className="text-xl font-black text-slate-500">&times;</span>
-                  <div className="px-3 py-1.5 rounded-lg bg-red-950/80 border border-red-500/60 text-center">
-                    <span className="text-[10px] uppercase font-bold text-red-300 block">Mult</span>
-                    <span className="text-lg font-black text-[#fe5f55]">{mult}</span>
+                  <span className="text-lg font-black text-slate-500">&times;</span>
+                  <div className="px-3 py-1 rounded-lg bg-red-950/80 border border-red-500/60 text-center min-w-[55px]">
+                    <span className="text-[9px] uppercase font-bold text-red-300 block">Mult</span>
+                    <span className="text-base font-black text-[#fe5f55]">{mult}</span>
                   </div>
                 </div>
               </div>
@@ -512,9 +519,7 @@ export function GameShell() {
                     variant="balatroBlue"
                     size="default"
                     disabled={hands <= 0 || selectedIds.length === 0}
-                    onClick={() => {
-                      // Hand evaluation triggered in Phase 3
-                    }}
+                    onClick={() => playSelectedHand()}
                     className="text-xs sm:text-sm px-6"
                   >
                     PLAY HAND ({selectedIds.length})
@@ -524,6 +529,102 @@ export function GameShell() {
             </div>
           </div>
         )}
+
+        {/* ROUND WON MODAL OVERLAY */}
+        <AnimatePresence>
+          {phase === "roundWon" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-amber-500/80 shadow-2xl text-center flex flex-col items-center gap-4"
+              >
+                <div className="p-3 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  <Trophy className="w-10 h-10" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-amber-400 uppercase tracking-wider">
+                    Blind Defeated!
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    You beat the {blindType} blind with {formatNumber(roundScore)} points.
+                  </p>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm">
+                  <div className="text-left text-slate-400">Target Score:</div>
+                  <div className="text-right font-mono font-bold text-slate-200">
+                    {formatNumber(targetScore)}
+                  </div>
+                  <div className="text-left text-slate-400">Total Scored:</div>
+                  <div className="text-right font-mono font-bold text-amber-400">
+                    {formatNumber(roundScore)}
+                  </div>
+                  <div className="text-left text-slate-400">Unused Hands Bonus:</div>
+                  <div className="text-right font-mono font-bold text-blue-400">
+                    +${hands}
+                  </div>
+                </div>
+
+                <Button
+                  variant="balatroGold"
+                  size="lg"
+                  onClick={() => advanceToNextBlind()}
+                  className="w-full py-5 text-base font-black tracking-wider"
+                >
+                  NEXT BLIND
+                </Button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ROUND LOST (GAME OVER) MODAL OVERLAY */}
+        <AnimatePresence>
+          {phase === "roundLost" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-red-500/80 shadow-2xl text-center flex flex-col items-center gap-4"
+              >
+                <div className="p-3 rounded-full bg-red-500/20 text-red-500 border border-red-500/40">
+                  <Flame className="w-10 h-10" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-red-500 uppercase tracking-wider">
+                    Run Defeated
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    You ran out of hands before reaching the target score.
+                  </p>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm">
+                  <div className="text-left text-slate-400">Final Score:</div>
+                  <div className="text-right font-mono font-bold text-red-400">
+                    {formatNumber(roundScore)}
+                  </div>
+                  <div className="text-left text-slate-400">Required:</div>
+                  <div className="text-right font-mono font-bold text-slate-200">
+                    {formatNumber(targetScore)}
+                  </div>
+                </div>
+
+                <Button
+                  variant="balatroRed"
+                  size="lg"
+                  onClick={() => resetGame()}
+                  className="w-full py-5 text-base font-black tracking-wider"
+                >
+                  TRY AGAIN
+                </Button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

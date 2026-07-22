@@ -4,6 +4,7 @@ import {
   BlindType,
   PlayingCard,
   SortCriterion,
+  HandScoreBreakdown,
 } from "@/types";
 import {
   MAX_HAND_SIZE,
@@ -21,6 +22,7 @@ import {
   discardCards,
   sortCards,
 } from "@/features/poker/services/deck.service";
+import { calculateHandScore } from "@/features/scoring/services/scoring-engine.service";
 import type { ScoreSlice } from "./scoreSlice";
 import type { JokerSlice } from "./jokerSlice";
 
@@ -43,6 +45,7 @@ export interface GameSlice {
   toggleCardSelection: (cardId: string) => void;
   clearSelection: () => void;
   discardSelectedCards: () => void;
+  playSelectedHand: () => HandScoreBreakdown | null;
   drawCards: (count?: number) => void;
   sortHand: (criterion: SortCriterion) => void;
   setPhase: (phase: GamePhase) => void;
@@ -99,23 +102,28 @@ export const createGameSlice: StateCreator<
   },
 
   toggleCardSelection: (cardId: string) => {
-    const { selectedCardIds } = get();
+    const { selectedCardIds, hand, jokers } = get();
+    let nextSelected: string[];
+
     if (selectedCardIds.includes(cardId)) {
-      set({
-        selectedCardIds: selectedCardIds.filter((id) => id !== cardId),
-      });
+      nextSelected = selectedCardIds.filter((id) => id !== cardId);
     } else {
       if (selectedCardIds.length >= MAX_PLAYED_CARDS) {
         return;
       }
-      set({
-        selectedCardIds: [...selectedCardIds, cardId],
-      });
+      nextSelected = [...selectedCardIds, cardId];
     }
+
+    set({ selectedCardIds: nextSelected });
+
+    const selectedCards = hand.filter((c) => nextSelected.includes(c.id));
+    const heldCards = hand.filter((c) => !nextSelected.includes(c.id));
+    get().updateScorePreview(selectedCards, heldCards, jokers);
   },
 
   clearSelection: () => {
     set({ selectedCardIds: [] });
+    get().updateScorePreview([], [], []);
   },
 
   discardSelectedCards: () => {
@@ -148,6 +156,79 @@ export const createGameSlice: StateCreator<
       discardPile: newDiscardPile,
       selectedCardIds: [],
     });
+
+    get().updateScorePreview([], [], []);
+  },
+
+  playSelectedHand: () => {
+    const {
+      handsRemaining,
+      selectedCardIds,
+      hand,
+      deck,
+      discardPile,
+      handLevels,
+      jokers,
+      roundScore,
+      targetScore,
+      money,
+    } = get();
+
+    if (handsRemaining <= 0 || selectedCardIds.length === 0) {
+      return null;
+    }
+
+    const playedCards = hand.filter((c) => selectedCardIds.includes(c.id));
+    const heldCards = hand.filter((c) => !selectedCardIds.includes(c.id));
+
+    // Calculate score using pure scoring engine
+    const result = calculateHandScore({
+      playedCards,
+      heldCards,
+      handLevels,
+      jokers,
+    });
+
+    const newRoundScore = roundScore + result.totalHandScore;
+    const remainingHands = handsRemaining - 1;
+
+    // Discard played cards and replenish from deck
+    const {
+      hand: keptHand,
+      discardPile: newDiscardPile,
+    } = discardCards(hand, discardPile, selectedCardIds);
+
+    const {
+      hand: replenishedHand,
+      remainingDeck,
+    } = drawCards(keptHand, deck, selectedCardIds.length);
+
+    // Determine win/loss condition
+    let nextPhase: GamePhase = "playing";
+    let earnedMoney = 0;
+
+    if (newRoundScore >= targetScore) {
+      nextPhase = "roundWon";
+      // Win reward: $3 base + $1 per unused hand
+      earnedMoney = 3 + remainingHands;
+    } else if (remainingHands <= 0) {
+      nextPhase = "roundLost";
+    }
+
+    set({
+      roundScore: newRoundScore,
+      handsRemaining: remainingHands,
+      hand: replenishedHand,
+      deck: remainingDeck,
+      discardPile: newDiscardPile,
+      selectedCardIds: [],
+      phase: nextPhase,
+      money: money + earnedMoney,
+    });
+
+    get().updateScorePreview([], [], []);
+
+    return result;
   },
 
   drawCards: (count?: number) => {
