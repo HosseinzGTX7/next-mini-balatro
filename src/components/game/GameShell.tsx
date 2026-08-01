@@ -11,10 +11,7 @@ import {
   Tv,
   RotateCcw,
   Info,
-  Layers,
   Coins,
-  ArrowUpDown,
-  Shuffle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,16 +34,12 @@ import {
   useMoney,
   useRoundScore,
   useTargetScore,
-  useHandChips,
-  useHandMult,
-  useActivePokerHand,
   useJokers,
   useMaxJokers,
-  useHand,
-  useSelectedCardIds,
-  useDeckCount,
 } from "@/store/useGameStore";
 import { formatNumber } from "@/lib/utils";
+import { TableBoard } from "@/components/game/TableBoard";
+import { HandView } from "@/features/poker/components/HandView";
 
 export function GameShell() {
   const phase = useGamePhase();
@@ -58,24 +51,14 @@ export function GameShell() {
   const money = useMoney();
   const roundScore = useRoundScore();
   const targetScore = useTargetScore();
-  const chips = useHandChips();
-  const mult = useHandMult();
-  const activePokerHand = useActivePokerHand();
   const jokers = useJokers();
   const maxJokers = useMaxJokers();
-  const hand = useHand();
-  const selectedIds = useSelectedCardIds();
-  const deckCount = useDeckCount();
 
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [soundMuted, setSoundMuted] = useState(false);
 
   const startGame = useGameStore((state) => state.startGame);
-  const toggleCardSelection = useGameStore((state) => state.toggleCardSelection);
-  const discardSelected = useGameStore((state) => state.discardSelectedCards);
-  const playSelectedHand = useGameStore((state) => state.playSelectedHand);
   const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
-  const sortHand = useGameStore((state) => state.sortHand);
   const resetGame = useGameStore((state) => state.resetGame);
 
   const scoreProgress = Math.min(100, Math.round((roundScore / (targetScore || 1)) * 100));
@@ -274,11 +257,11 @@ export function GameShell() {
           </div>
         ) : (
           /* ACTIVE PLAYING BOARD */
-          <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-4">
-            {/* SCORE TARGET DASHBOARD */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md shadow-xl">
+          <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-3 sm:gap-4">
+            {/* SCORE TARGET & RESOURCES DASHBOARD */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md shadow-xl">
               {/* Target & Current Round Score */}
-              <div className="flex flex-col justify-center gap-1 border-r border-slate-800/60 pr-4">
+              <div className="flex flex-col justify-center gap-1 border-r-0 md:border-r border-slate-800/60 pr-0 md:pr-4">
                 <div className="flex items-center justify-between text-xs text-slate-400 uppercase font-semibold">
                   <span>Round Score</span>
                   <span>Goal: {formatNumber(targetScore)}</span>
@@ -296,7 +279,7 @@ export function GameShell() {
               </div>
 
               {/* Hands & Discards Count */}
-              <div className="flex items-center justify-around border-r border-slate-800/60 px-4">
+              <div className="flex items-center justify-around px-4">
                 <div className="text-center">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block mb-1">
                     Hands
@@ -315,218 +298,13 @@ export function GameShell() {
                   </span>
                 </div>
               </div>
-
-              {/* Hand Score Preview (Chips X Mult) */}
-              <div className="flex flex-col items-center justify-center gap-1 pl-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  {activePokerHand || "Select Cards"}
-                </span>
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 rounded-lg bg-blue-950/80 border border-blue-500/60 text-center min-w-[55px]">
-                    <span className="text-[9px] uppercase font-bold text-blue-300 block">Chips</span>
-                    <span className="text-base font-black text-[#009dff]">{chips}</span>
-                  </div>
-                  <span className="text-lg font-black text-slate-500">&times;</span>
-                  <div className="px-3 py-1 rounded-lg bg-red-950/80 border border-red-500/60 text-center min-w-[55px]">
-                    <span className="text-[9px] uppercase font-bold text-red-300 block">Mult</span>
-                    <span className="text-base font-black text-[#fe5f55]">{mult}</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* FELT PLAY MAT / SELECTED CARDS PREVIEW */}
-            <div className="flex-1 flex items-center justify-center min-h-[160px] py-4">
-              <div className="w-full h-full border-2 border-dashed border-emerald-900/60 rounded-2xl flex flex-col items-center justify-center p-4 bg-emerald-950/10 backdrop-blur-xs">
-                {selectedIds.length === 0 ? (
-                  <p className="text-xs sm:text-sm font-semibold text-emerald-300/50 uppercase tracking-widest">
-                    Select up to 5 cards to play or discard
-                  </p>
-                ) : (
-                  <div className="flex items-center gap-2 flex-wrap justify-center">
-                    {hand
-                      .filter((c) => selectedIds.includes(c.id))
-                      .map((card) => (
-                        <div
-                          key={card.id}
-                          className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg bg-[#f6f3e8] text-slate-900 border-2 border-amber-400 shadow-lg flex flex-col justify-between p-1.5 font-bold"
-                        >
-                          <span
-                            className={`text-xs ${
-                              card.suit === "hearts" || card.suit === "diamonds"
-                                ? "text-red-600"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {card.rank}
-                          </span>
-                          <span
-                            className={`text-base self-center ${
-                              card.suit === "hearts" || card.suit === "diamonds"
-                                ? "text-red-600"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {card.suit === "hearts"
-                              ? "♥"
-                              : card.suit === "diamonds"
-                              ? "♦"
-                              : card.suit === "clubs"
-                              ? "♣"
-                              : "♠"}
-                          </span>
-                          <span className="text-[10px] self-end text-blue-600 font-mono">
-                            +{card.chipValue}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* MODULAR TABLE BOARD (Staged Cards & Live Score Forecast) */}
+            <TableBoard />
 
-            {/* HAND OF CARDS RACK */}
-            <div className="w-full flex flex-col items-center gap-3">
-              {/* Hand Utilities / Sorting */}
-              <div className="flex items-center gap-2 self-center text-xs">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => sortHand("rank")}
-                  className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-300"
-                >
-                  <ArrowUpDown className="w-3 h-3 mr-1 text-amber-400" /> Sort Rank
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => sortHand("suit")}
-                  className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-300"
-                >
-                  <Shuffle className="w-3 h-3 mr-1 text-blue-400" /> Sort Suit
-                </Button>
-              </div>
-
-              {/* Cards Rack */}
-              <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap max-w-4xl px-2">
-                <AnimatePresence>
-                  {hand.map((card) => {
-                    const isSelected = selectedIds.includes(card.id);
-                    const isRedSuit = card.suit === "hearts" || card.suit === "diamonds";
-                    const hasSpecialEdition = card.edition !== "base";
-                    const hasEnhancement = card.enhancement !== "none";
-
-                    return (
-                      <motion.button
-                        key={card.id}
-                        type="button"
-                        onClick={() => toggleCardSelection(card.id)}
-                        whileHover={{ y: -8, scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        animate={{
-                          y: isSelected ? -20 : 0,
-                          borderColor: isSelected
-                            ? "#38bdf8"
-                            : hasSpecialEdition
-                            ? "#a855f7"
-                            : "#2a3439",
-                        }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                        className={`w-14 h-22 sm:w-18 sm:h-28 rounded-lg bg-[#f6f3e8] border-2 shadow-md flex flex-col justify-between p-1.5 sm:p-2 cursor-pointer transition-shadow relative ${
-                          isSelected
-                            ? "shadow-blue-500/50 ring-2 ring-blue-400 shadow-xl"
-                            : "hover:shadow-lg"
-                        } ${
-                          card.isDebuffed ? "opacity-60 grayscale" : ""
-                        }`}
-                      >
-                        {/* Edition / Seal Indicator Badge */}
-                        {hasSpecialEdition && (
-                          <span className="absolute -top-2 -right-1 px-1 py-0.2 text-[8px] font-extrabold rounded bg-purple-600 text-white uppercase shadow-sm">
-                            {card.edition}
-                          </span>
-                        )}
-                        {card.seal !== "none" && (
-                          <span className="absolute -top-2 -left-1 px-1 py-0.2 text-[8px] font-extrabold rounded bg-amber-500 text-slate-950 uppercase shadow-sm">
-                            {card.seal}
-                          </span>
-                        )}
-
-                        <div className="flex items-center justify-between w-full">
-                          <span className={`text-xs sm:text-sm font-black ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
-                            {card.rank}
-                          </span>
-                          <span className={`text-xs ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
-                            {card.suit === "hearts"
-                              ? "♥"
-                              : card.suit === "diamonds"
-                              ? "♦"
-                              : card.suit === "clubs"
-                              ? "♣"
-                              : "♠"}
-                          </span>
-                        </div>
-
-                        <div
-                          className={`text-xl sm:text-3xl self-center font-bold ${
-                            isRedSuit ? "text-red-600" : "text-slate-900"
-                          }`}
-                        >
-                          {card.suit === "hearts"
-                            ? "♥"
-                            : card.suit === "diamonds"
-                            ? "♦"
-                            : card.suit === "clubs"
-                            ? "♣"
-                            : "♠"}
-                        </div>
-
-                        {hasEnhancement && (
-                          <div className="text-[8px] font-bold text-amber-800 bg-amber-200/80 rounded px-1 text-center uppercase truncate">
-                            {card.enhancement}
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between w-full text-[10px] font-mono">
-                          <span className="text-blue-700 font-bold">+{card.chipValue}</span>
-                          <span className="text-slate-400 text-[8px] uppercase">{card.suit.slice(0, 3)}</span>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-
-              {/* ACTION BUTTONS & DECK INFO */}
-              <div className="w-full flex items-center justify-between max-w-2xl px-4 py-2">
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                  <Layers className="w-4 h-4 text-slate-400" />
-                  <span>Deck: {deckCount} cards</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="balatroRed"
-                    size="default"
-                    disabled={discards <= 0 || selectedIds.length === 0}
-                    onClick={discardSelected}
-                    className="text-xs sm:text-sm px-4"
-                  >
-                    DISCARD ({selectedIds.length})
-                  </Button>
-
-                  <Button
-                    variant="balatroBlue"
-                    size="default"
-                    disabled={hands <= 0 || selectedIds.length === 0}
-                    onClick={() => playSelectedHand()}
-                    className="text-xs sm:text-sm px-6"
-                  >
-                    PLAY HAND ({selectedIds.length})
-                  </Button>
-                </div>
-              </div>
-            </div>
+            {/* MODULAR INTERACTIVE HAND VIEW (Card Rack, Manual Reorder, Discard & Play) */}
+            <HandView />
           </div>
         )}
 

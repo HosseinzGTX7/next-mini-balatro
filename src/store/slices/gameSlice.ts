@@ -48,6 +48,7 @@ export interface GameSlice {
   playSelectedHand: () => HandScoreBreakdown | null;
   drawCards: (count?: number) => void;
   sortHand: (criterion: SortCriterion) => void;
+  reorderHandCards: (fromIndex: number, toIndex: number) => void;
   setPhase: (phase: GamePhase) => void;
   addMoney: (amount: number) => void;
   spendMoney: (amount: number) => boolean;
@@ -245,6 +246,22 @@ export const createGameSlice: StateCreator<
     const { hand } = get();
     const sorted = sortCards(hand, criterion);
     set({ hand: sorted });
+  },
+
+  reorderHandCards: (fromIndex: number, toIndex: number) => {
+    const { hand } = get();
+    if (
+      fromIndex < 0 ||
+      fromIndex >= hand.length ||
+      toIndex < 0 ||
+      toIndex >= hand.length
+    ) {
+      return;
+    }
+    const result = Array.from(hand);
+    const [removed] = result.splice(fromIndex, 1);
+    result.splice(toIndex, 0, removed);
+    set({ hand: result });
   },
 
   setPhase: (phase: GamePhase) => {
