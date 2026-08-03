@@ -46,6 +46,7 @@ export interface GameSlice {
   clearSelection: () => void;
   discardSelectedCards: () => void;
   playSelectedHand: () => HandScoreBreakdown | null;
+  commitHandScore: (breakdown: HandScoreBreakdown) => void;
   drawCards: (count?: number) => void;
   sortHand: (criterion: SortCriterion) => void;
   reorderHandCards: (fromIndex: number, toIndex: number) => void;
@@ -166,13 +167,8 @@ export const createGameSlice: StateCreator<
       handsRemaining,
       selectedCardIds,
       hand,
-      deck,
-      discardPile,
       handLevels,
       jokers,
-      roundScore,
-      targetScore,
-      money,
     } = get();
 
     if (handsRemaining <= 0 || selectedCardIds.length === 0) {
@@ -190,8 +186,26 @@ export const createGameSlice: StateCreator<
       jokers,
     });
 
-    const newRoundScore = roundScore + result.totalHandScore;
-    const remainingHands = handsRemaining - 1;
+    set({ phase: "scoring" });
+    get().startScoringAnimation(result, playedCards);
+
+    return result;
+  },
+
+  commitHandScore: (breakdown: HandScoreBreakdown) => {
+    const {
+      handsRemaining,
+      selectedCardIds,
+      hand,
+      deck,
+      discardPile,
+      roundScore,
+      targetScore,
+      money,
+    } = get();
+
+    const newRoundScore = roundScore + breakdown.totalHandScore;
+    const remainingHands = Math.max(0, handsRemaining - 1);
 
     // Discard played cards and replenish from deck
     const {
@@ -228,8 +242,7 @@ export const createGameSlice: StateCreator<
     });
 
     get().updateScorePreview([], [], []);
-
-    return result;
+    get().endScoringAnimation();
   },
 
   drawCards: (count?: number) => {

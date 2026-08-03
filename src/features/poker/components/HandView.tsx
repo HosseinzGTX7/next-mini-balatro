@@ -21,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 
+import { soundEngine } from "@/lib/sound";
+
 /**
  * Interactive Player Hand View.
  * Provides 8-card responsive rack, card selection, sorting, manual card shifting,
@@ -44,6 +46,30 @@ export const HandView = memo(function HandView() {
   const canPlay = hands > 0 && selectedCount > 0 && selectedCount <= 5;
   const canDiscard = discards > 0 && selectedCount > 0 && selectedCount <= 5;
 
+  const handleCardClick = (cardId: string) => {
+    if (selectedIds.includes(cardId)) {
+      soundEngine.playCardDeselect();
+    } else {
+      soundEngine.playCardSelect();
+    }
+    toggleSelection(cardId);
+  };
+
+  const handleSort = (crit: "rank" | "suit") => {
+    soundEngine.playCardDeal();
+    sortHand(crit);
+  };
+
+  const handleDiscard = () => {
+    soundEngine.playCardDiscard();
+    discardSelected();
+  };
+
+  const handleClear = () => {
+    soundEngine.playCardDeselect();
+    clearSelection();
+  };
+
   return (
     <div className="w-full flex flex-col items-center gap-3 max-w-5xl mx-auto px-2 pb-2">
       {/* Hand Utilities / Sorting Controls */}
@@ -52,7 +78,7 @@ export const HandView = memo(function HandView() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => sortHand("rank")}
+            onClick={() => handleSort("rank")}
             className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/70 hover:bg-slate-800 text-slate-300"
             title="Sort cards by rank (Ace to 2)"
           >
@@ -62,7 +88,7 @@ export const HandView = memo(function HandView() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => sortHand("suit")}
+            onClick={() => handleSort("suit")}
             className="h-7 px-2.5 text-[11px] border-slate-700 bg-slate-900/70 hover:bg-slate-800 text-slate-300"
             title="Sort cards by suit (Spades, Hearts, Clubs, Diamonds)"
           >
@@ -88,7 +114,7 @@ export const HandView = memo(function HandView() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearSelection}
+              onClick={handleClear}
               className="h-6 px-2 text-[10px] text-slate-400 hover:text-white"
             >
               <X className="w-3 h-3 mr-0.5" /> Clear
@@ -144,7 +170,7 @@ export const HandView = memo(function HandView() {
                 <CardView
                   card={card}
                   isSelected={isSelected}
-                  onClick={() => toggleSelection(card.id)}
+                  onClick={() => handleCardClick(card.id)}
                 />
               </motion.div>
             );
@@ -171,7 +197,7 @@ export const HandView = memo(function HandView() {
             variant="balatroRed"
             size="default"
             disabled={!canDiscard}
-            onClick={discardSelected}
+            onClick={handleDiscard}
             className="text-xs sm:text-sm px-4 min-w-[110px]"
           >
             DISCARD {selectedCount > 0 ? `(${selectedCount})` : ""}

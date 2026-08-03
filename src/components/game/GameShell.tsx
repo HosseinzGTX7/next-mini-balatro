@@ -40,6 +40,10 @@ import {
 import { formatNumber } from "@/lib/utils";
 import { TableBoard } from "@/components/game/TableBoard";
 import { HandView } from "@/features/poker/components/HandView";
+import { BalatroBackground } from "@/components/game/BalatroBackground";
+import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAnimationOverlay";
+import { soundEngine } from "@/lib/sound";
+import { useScreenShake } from "@/lib/useScreenShake";
 
 export function GameShell() {
   const phase = useGamePhase();
@@ -55,23 +59,51 @@ export function GameShell() {
   const maxJokers = useMaxJokers();
 
   const [crtEnabled, setCrtEnabled] = useState(true);
-  const [soundMuted, setSoundMuted] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(soundEngine.getIsMuted());
+
+  const isShaking = useScreenShake((state) => state.isShaking);
+  const shakeIntensity = useScreenShake((state) => state.intensity);
 
   const startGame = useGameStore((state) => state.startGame);
   const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
   const resetGame = useGameStore((state) => state.resetGame);
 
+  const handleSoundToggle = () => {
+    const nextMuted = soundEngine.toggleMute();
+    setSoundMuted(nextMuted);
+    if (!nextMuted) {
+      soundEngine.playCardSelect();
+    }
+  };
+
   const scoreProgress = Math.min(100, Math.round((roundScore / (targetScore || 1)) * 100));
 
   return (
-    <div className="relative min-h-screen w-full bg-[#0d1217] text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans">
+    <motion.div
+      animate={
+        isShaking
+          ? {
+              x: shakeIntensity === "heavy" ? [-6, 6, -4, 4, -2, 2, 0] : [-3, 3, -2, 2, 0],
+              y: shakeIntensity === "heavy" ? [4, -4, 3, -3, -1, 1, 0] : [2, -2, 1, -1, 0],
+            }
+          : { x: 0, y: 0 }
+      }
+      transition={{ duration: 0.25 }}
+      className="relative min-h-screen w-full bg-[#0b0f14] text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans"
+    >
+      {/* Dynamic Swirling Psychedelic Balatro Vortex Background */}
+      <BalatroBackground />
+
       {/* CRT Scanline & Vignette Effects */}
       {crtEnabled && (
         <>
-          <div className="balatro-crt-overlay fixed inset-0 z-40 pointer-events-none opacity-40" />
+          <div className="balatro-crt-overlay fixed inset-0 z-40 pointer-events-none opacity-30" />
           <div className="balatro-vignette fixed inset-0 z-40 pointer-events-none" />
         </>
       )}
+
+      {/* Step-by-Step Sequential Scoring Animation Overlay */}
+      <ScoringAnimationOverlay />
 
       {/* TOP BAR / HEADER */}
       <header className="relative z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-md">
@@ -123,7 +155,7 @@ export function GameShell() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSoundMuted(!soundMuted)}
+            onClick={handleSoundToggle}
             className="h-8 w-8 text-xs text-slate-400 hover:text-white"
             title="Toggle Retro Synthesizer Audio"
           >
@@ -248,7 +280,10 @@ export function GameShell() {
               <Button
                 variant="balatroBlue"
                 size="lg"
-                onClick={() => startGame()}
+                onClick={() => {
+                  soundEngine.playCardDeal();
+                  startGame();
+                }}
                 className="w-full text-lg py-6 font-black tracking-widest"
               >
                 PLAY RUN
@@ -348,7 +383,10 @@ export function GameShell() {
                 <Button
                   variant="balatroGold"
                   size="lg"
-                  onClick={() => advanceToNextBlind()}
+                  onClick={() => {
+                    soundEngine.playCashChime();
+                    advanceToNextBlind();
+                  }}
                   className="w-full py-5 text-base font-black tracking-wider"
                 >
                   NEXT BLIND
@@ -394,7 +432,10 @@ export function GameShell() {
                 <Button
                   variant="balatroRed"
                   size="lg"
-                  onClick={() => resetGame()}
+                  onClick={() => {
+                    soundEngine.playCardDeal();
+                    resetGame();
+                  }}
                   className="w-full py-5 text-base font-black tracking-wider"
                 >
                   TRY AGAIN
@@ -404,6 +445,6 @@ export function GameShell() {
           )}
         </AnimatePresence>
       </main>
-    </div>
+    </motion.div>
   );
 }

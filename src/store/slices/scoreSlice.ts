@@ -1,5 +1,11 @@
 import { StateCreator } from "zustand";
-import { PokerHandName, HandLevelData, PlayingCard, JokerItem } from "@/types";
+import {
+  PokerHandName,
+  HandLevelData,
+  PlayingCard,
+  JokerItem,
+  HandScoreBreakdown,
+} from "@/types";
 import { BASE_POKER_HANDS } from "@/lib/constants";
 import { calculateHandScore } from "@/features/scoring/services/scoring-engine.service";
 import type { CombinedStore } from "./gameSlice";
@@ -12,6 +18,8 @@ export interface ScoreSlice {
   activePokerHand: PokerHandName | null;
   handLevels: Record<PokerHandName, HandLevelData>;
   isScoring: boolean;
+  activeScoringBreakdown: HandScoreBreakdown | null;
+  activeScoringCards: PlayingCard[];
 
   // Actions
   setTargetScore: (target: number) => void;
@@ -23,6 +31,11 @@ export interface ScoreSlice {
     heldCards: PlayingCard[],
     jokers?: JokerItem[]
   ) => void;
+  startScoringAnimation: (
+    breakdown: HandScoreBreakdown,
+    playedCards: PlayingCard[]
+  ) => void;
+  endScoringAnimation: () => void;
   levelUpHand: (
     handName: PokerHandName,
     chipsDelta?: number,
@@ -45,6 +58,8 @@ export const createScoreSlice: StateCreator<
   activePokerHand: null,
   handLevels: { ...BASE_POKER_HANDS },
   isScoring: false,
+  activeScoringBreakdown: null,
+  activeScoringCards: [],
 
   setTargetScore: (target: number) => {
     set({ targetScore: target });
@@ -94,6 +109,25 @@ export const createScoreSlice: StateCreator<
     });
   },
 
+  startScoringAnimation: (
+    breakdown: HandScoreBreakdown,
+    playedCards: PlayingCard[]
+  ) => {
+    set({
+      isScoring: true,
+      activeScoringBreakdown: breakdown,
+      activeScoringCards: playedCards,
+    });
+  },
+
+  endScoringAnimation: () => {
+    set({
+      isScoring: false,
+      activeScoringBreakdown: null,
+      activeScoringCards: [],
+    });
+  },
+
   levelUpHand: (
     handName: PokerHandName,
     chipsDelta = 15,
@@ -126,6 +160,8 @@ export const createScoreSlice: StateCreator<
       currentHandMult: 0,
       activePokerHand: null,
       isScoring: false,
+      activeScoringBreakdown: null,
+      activeScoringCards: [],
     });
   },
 });
