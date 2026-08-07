@@ -29,6 +29,11 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
   const [runningChips, setRunningChips] = useState(0);
   const [runningMult, setRunningMult] = useState(0);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [activeJokerTrigger, setActiveJokerTrigger] = useState<{
+    name: string;
+    message: string;
+    effectType: "chips" | "mult" | "xmult";
+  } | null>(null);
 
   const triggerShake = useScreenShake((state) => state.triggerShake);
 
@@ -76,6 +81,7 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
       setRunningChips(0);
       setRunningMult(0);
       setActiveCardId(null);
+      setActiveJokerTrigger(null);
       return;
     }
 
@@ -110,24 +116,28 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
       // Process step audio & visual feedback
       switch (event.type) {
         case "baseHand":
+          setActiveJokerTrigger(null);
           setRunningChips(event.chips);
           setRunningMult(event.mult);
           soundEngine.playChipAdd(0);
           break;
 
         case "cardChips":
+          setActiveJokerTrigger(null);
           setActiveCardId(event.cardId);
           setRunningChips(event.currentChips);
           soundEngine.playChipAdd(index);
           break;
 
         case "cardMult":
+          setActiveJokerTrigger(null);
           setActiveCardId(event.cardId);
           setRunningMult(event.currentMult);
           soundEngine.playMultTrigger(index);
           break;
 
         case "cardXMult":
+          setActiveJokerTrigger(null);
           setActiveCardId(event.cardId);
           setRunningMult(event.currentMult);
           soundEngine.playXMultTrigger();
@@ -135,11 +145,22 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
           break;
 
         case "heldInHand":
+          setActiveJokerTrigger(null);
           setRunningMult(event.currentMult);
           soundEngine.playXMultTrigger();
           break;
 
         case "joker":
+          if (event.isCardTrigger && event.cardId) {
+            setActiveCardId(event.cardId);
+          } else {
+            setActiveCardId(null);
+          }
+          setActiveJokerTrigger({
+            name: event.jokerName,
+            message: event.message ?? `${event.amount}`,
+            effectType: event.effectType,
+          });
           setRunningChips(event.currentChips);
           setRunningMult(event.currentMult);
           if (event.effectType === "xmult") {
@@ -154,6 +175,7 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
 
         case "finalTally":
           setActiveCardId(null);
+          setActiveJokerTrigger(null);
           setRunningChips(event.totalChips);
           setRunningMult(event.totalMult);
           soundEngine.playScreenShake();
@@ -236,6 +258,37 @@ export const ScoringAnimationOverlay = memo(function ScoringAnimationOverlay() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Joker Trigger Announcement Banner */}
+        <div className="h-10 flex items-center justify-center">
+          <AnimatePresence>
+            {activeJokerTrigger && (
+              <motion.div
+                initial={{ scale: 0.8, y: 10, opacity: 0 }}
+                animate={{ scale: 1.1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-950/90 border-2 border-amber-400 shadow-xl shadow-amber-500/40 text-center select-none z-30"
+              >
+                <Flame className="w-4 h-4 text-amber-400 animate-bounce" />
+                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  {activeJokerTrigger.name}:
+                </span>
+                <span
+                  className={`text-xs font-mono font-black ${
+                    activeJokerTrigger.effectType === "xmult"
+                      ? "text-red-400"
+                      : activeJokerTrigger.effectType === "mult"
+                      ? "text-[#fe5f55]"
+                      : "text-[#009dff]"
+                  }`}
+                >
+                  {activeJokerTrigger.message}
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Bottom Stage: Escalating Score Formula HUD */}

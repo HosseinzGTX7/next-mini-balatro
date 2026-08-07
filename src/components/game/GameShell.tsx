@@ -34,14 +34,13 @@ import {
   useMoney,
   useRoundScore,
   useTargetScore,
-  useJokers,
-  useMaxJokers,
 } from "@/store/useGameStore";
 import { formatNumber } from "@/lib/utils";
 import { TableBoard } from "@/components/game/TableBoard";
 import { HandView } from "@/features/poker/components/HandView";
 import { BalatroBackground } from "@/components/game/BalatroBackground";
 import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAnimationOverlay";
+import { JokerRack } from "@/features/jokers/components/JokerRack";
 import { soundEngine } from "@/lib/sound";
 import { useScreenShake } from "@/lib/useScreenShake";
 
@@ -55,8 +54,6 @@ export function GameShell() {
   const money = useMoney();
   const roundScore = useRoundScore();
   const targetScore = useTargetScore();
-  const jokers = useJokers();
-  const maxJokers = useMaxJokers();
 
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [soundMuted, setSoundMuted] = useState(soundEngine.getIsMuted());
@@ -214,48 +211,8 @@ export function GameShell() {
         </div>
       </header>
 
-      {/* JOKER SLOTS BAR */}
-      <section className="relative z-20 px-4 py-2 bg-slate-950/40 border-b border-slate-800/40">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-amber-500" /> Jokers ({jokers.length}/{maxJokers})
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {Array.from({ length: maxJokers }).map((_, idx) => {
-              const joker = jokers[idx];
-              return (
-                <div
-                  key={idx}
-                  className={`w-20 h-28 sm:w-24 sm:h-32 rounded-lg border-2 flex flex-col items-center justify-center p-2 text-center transition-all ${
-                    joker
-                      ? "border-amber-500/80 bg-gradient-to-b from-amber-950/40 to-slate-900 shadow-md shadow-amber-900/30"
-                      : "border-dashed border-slate-800/80 bg-slate-900/20 text-slate-700"
-                  }`}
-                >
-                  {joker ? (
-                    <div className="flex flex-col items-center justify-between h-full w-full">
-                      <span className="text-[10px] uppercase font-bold text-amber-300 line-clamp-2">
-                        {joker.name}
-                      </span>
-                      <span className="text-[9px] text-slate-400 line-clamp-3">
-                        {joker.description}
-                      </span>
-                      <Badge variant="outline" className="text-[8px] py-0 px-1 border-amber-500/30 text-amber-400">
-                        ${joker.sellValue}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <span className="text-[11px] font-semibold text-slate-600">Empty</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* DYNAMIC JOKER RACK */}
+      {phase !== "menu" && <JokerRack />}
 
       {/* MAIN PLAY AREA & POKER TABLE FELT */}
       <main className="relative z-10 flex-1 flex flex-col justify-between p-4 poker-felt-pattern">

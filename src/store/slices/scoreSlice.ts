@@ -94,12 +94,15 @@ export const createScoreSlice: StateCreator<
       return;
     }
 
-    const { handLevels } = get();
+    const { handLevels, discardsRemaining, handsRemaining, jokers: storeJokers } = get();
+    const activeJokers = jokers && jokers.length > 0 ? jokers : storeJokers;
     const result = calculateHandScore({
       playedCards: selectedCards,
       heldCards,
       handLevels,
-      jokers,
+      jokers: activeJokers,
+      discardsRemaining,
+      handsRemaining,
     });
 
     set({

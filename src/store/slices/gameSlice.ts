@@ -23,6 +23,7 @@ import {
   sortCards,
 } from "@/features/poker/services/deck.service";
 import { calculateHandScore } from "@/features/scoring/services/scoring-engine.service";
+import { createJoker } from "@/features/jokers/data/joker-definitions";
 import type { ScoreSlice } from "./scoreSlice";
 import type { JokerSlice } from "./jokerSlice";
 
@@ -83,6 +84,7 @@ export const createGameSlice: StateCreator<
     const rawDeck = createStandardDeck();
     const shuffled = shuffleDeck(rawDeck, seed);
     const { hand: initialHand, remainingDeck } = dealInitialHand(shuffled, MAX_HAND_SIZE);
+    const starterJoker = createJoker("joker");
 
     set({
       phase: "playing",
@@ -97,6 +99,7 @@ export const createGameSlice: StateCreator<
       hand: initialHand,
       selectedCardIds: [],
       discardPile: [],
+      jokers: [starterJoker],
     });
 
     get().setTargetScore(ANTE_BASE_TARGETS[1].small);
@@ -165,6 +168,7 @@ export const createGameSlice: StateCreator<
   playSelectedHand: () => {
     const {
       handsRemaining,
+      discardsRemaining,
       selectedCardIds,
       hand,
       handLevels,
@@ -184,6 +188,8 @@ export const createGameSlice: StateCreator<
       heldCards,
       handLevels,
       jokers,
+      discardsRemaining,
+      handsRemaining,
     });
 
     set({ phase: "scoring" });
@@ -343,6 +349,7 @@ export const createGameSlice: StateCreator<
 
     get().setTargetScore(targetScore);
     get().resetRoundScore();
+    get().resolveRoundEndJokers();
   },
 
   resetGame: () => {

@@ -62,6 +62,9 @@ export const ScoringStepEventSchema = z.discriminatedUnion("type", [
     amount: z.number(),
     currentChips: z.number().int(),
     currentMult: z.number(),
+    message: z.string().optional(),
+    cardId: z.string().optional(),
+    isCardTrigger: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("finalTally"),

@@ -23,6 +23,15 @@ import type {
   HandScoreBreakdown,
 } from "@/features/scoring/schemas/scoring.schema";
 
+import type {
+  JokerRarity,
+  JokerTriggerType,
+  JokerEffectType,
+  JokerCondition,
+  JokerTemplate,
+  JokerItem,
+} from "@/features/jokers/schemas/joker.schema";
+
 export type {
   CardSuit,
   CardRank,
@@ -40,6 +49,12 @@ export type {
   ScoringStepEvent,
   HandEvaluationResult,
   HandScoreBreakdown,
+  JokerRarity,
+  JokerTriggerType,
+  JokerEffectType,
+  JokerCondition,
+  JokerTemplate,
+  JokerItem,
 };
 
 export interface HandLevelData {
@@ -58,24 +73,6 @@ export interface BossModifier {
   debuffSuit?: CardSuit;
   maxHandsAllowed?: number;
   minCardsRequired?: number;
-}
-
-export type JokerRarity = "common" | "uncommon" | "rare" | "legendary";
-
-export interface JokerItem {
-  id: string;
-  name: string;
-  rarity: JokerRarity;
-  cost: number;
-  sellValue: number;
-  description: string;
-  edition?: CardEdition;
-  // Trigger logic hook keys
-  triggerType: "onHandPlayed" | "onCardScored" | "onDiscard" | "passive" | "roundEnd";
-  plusChips?: number;
-  plusMult?: number;
-  timesMult?: number;
-  customData?: Record<string, unknown>;
 }
 
 export type GamePhase =
