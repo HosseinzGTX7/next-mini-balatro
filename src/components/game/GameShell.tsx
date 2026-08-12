@@ -41,6 +41,7 @@ import { HandView } from "@/features/poker/components/HandView";
 import { BalatroBackground } from "@/components/game/BalatroBackground";
 import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAnimationOverlay";
 import { JokerRack } from "@/features/jokers/components/JokerRack";
+import { BlindSelectionView, BlindBanner } from "@/features/blinds/components";
 import { soundEngine } from "@/lib/sound";
 import { useScreenShake } from "@/lib/useScreenShake";
 
@@ -247,9 +248,15 @@ export function GameShell() {
               </Button>
             </motion.div>
           </div>
+        ) : phase === "blindSelect" ? (
+          /* BLIND SELECTION SCREEN */
+          <BlindSelectionView />
         ) : (
           /* ACTIVE PLAYING BOARD */
           <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-3 sm:gap-4">
+            {/* ACTIVE BLIND & BOSS MODIFIER BANNER */}
+            <BlindBanner />
+
             {/* SCORE TARGET & RESOURCES DASHBOARD */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md shadow-xl">
               {/* Target & Current Round Score */}
@@ -401,7 +408,61 @@ export function GameShell() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* RUN WON (VICTORY) MODAL OVERLAY */}
+        <AnimatePresence>
+          {phase === "gameWon" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-amber-400 shadow-2xl text-center flex flex-col items-center gap-4"
+              >
+                <div className="p-4 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  <Trophy className="w-12 h-12 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 uppercase tracking-wider">
+                    VICTORY!
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 font-semibold">
+                    You conquered all 8 Antes and defeated every Boss Blind!
+                  </p>
+                </div>
+
+                <div className="w-full bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm space-y-1">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Ante Cleared:</span>
+                    <span className="font-mono font-bold text-amber-400">8 / 8</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Total Bankroll:</span>
+                    <span className="font-mono font-bold text-emerald-400">${money}</span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="balatroGold"
+                  size="lg"
+                  onClick={() => {
+                    soundEngine.playCardDeal();
+                    resetGame();
+                  }}
+                  className="w-full py-5 text-base font-black tracking-wider"
+                >
+                  PLAY NEW RUN
+                </Button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
+
+      {/* Boss Blind Crimson Ambient Screen Tint */}
+      {blindType === "boss" && phase === "playing" && (
+        <div className="fixed inset-0 pointer-events-none bg-red-950/15 mix-blend-color-burn z-10" />
+      )}
     </motion.div>
   );
 }

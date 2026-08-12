@@ -98,13 +98,27 @@ export const CardView = memo(function CardView({
       return "bg-gradient-to-br from-amber-100 via-yellow-200 to-amber-300 border-amber-400";
     }
     if (card.enhancement === "steel") {
-      return "bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 border-slate-500";
+      return "bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 border-slate-400 text-slate-900";
     }
     if (card.enhancement === "glass") {
-      return "bg-gradient-to-br from-cyan-50/90 via-sky-100/80 to-blue-200/70 border-sky-300 backdrop-blur-sm";
+      return "bg-gradient-to-br from-cyan-50/80 via-white/70 to-blue-100/80 border-cyan-300 backdrop-blur-xs";
     }
-    return "bg-[#f7f4ea] border-[#242b33]";
+    return "bg-amber-50 text-slate-950 border-slate-300";
   };
+
+  if (card.isFaceDown) {
+    return (
+      <div
+        className={`relative rounded-xl border-2 border-red-900/80 bg-gradient-to-br from-red-950 via-slate-950 to-red-950 p-2 flex flex-col items-center justify-center select-none overflow-hidden ${sizeClasses} shadow-md cursor-pointer`}
+        onClick={!disabled ? onClick : undefined}
+      >
+        <div className="w-full h-full rounded-lg border border-dashed border-red-500/40 flex flex-col items-center justify-center">
+          <span className="text-xl sm:text-2xl font-black text-red-500/70 font-mono">?</span>
+          <span className="text-[7px] font-mono text-red-400 uppercase tracking-widest mt-1">HIDDEN</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider delayDuration={250}>
@@ -248,6 +262,16 @@ export const CardView = memo(function CardView({
                   </span>
                 )}
               </div>
+
+              {/* Debuff Slash & Overlay */}
+              {card.isDebuffed && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                  <div className="absolute w-[140%] h-0.5 bg-red-600 rotate-45 shadow-sm" />
+                  <div className="px-1 py-0.5 rounded bg-red-950/90 border border-red-500 text-[8px] font-black text-red-400 uppercase tracking-widest z-30 shadow-md">
+                    DEBUFFED
+                  </div>
+                </div>
+              )}
 
               {/* Card Footer: Chip Value & Inverted Rank */}
               <div className="flex items-center justify-between w-full text-[10px] font-mono z-10">

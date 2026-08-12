@@ -53,6 +53,7 @@ export const PlayingCardSchema = z.object({
   edition: CardEditionSchema.default("base"),
   seal: CardSealSchema.default("none"),
   isDebuffed: z.boolean().default(false),
+  isFaceDown: z.boolean().default(false),
 });
 
 // Single Source of Truth: Derived TypeScript Types

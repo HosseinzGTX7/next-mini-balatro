@@ -32,6 +32,14 @@ import type {
   JokerItem,
 } from "@/features/jokers/schemas/joker.schema";
 
+import type {
+  BlindType,
+  BossModifier,
+  SkipTag,
+  SkipTagType,
+  BlindConfig,
+} from "@/features/blinds/schemas/blind.schema";
+
 export type {
   CardSuit,
   CardRank,
@@ -55,6 +63,11 @@ export type {
   JokerCondition,
   JokerTemplate,
   JokerItem,
+  BlindType,
+  BossModifier,
+  SkipTag,
+  SkipTagType,
+  BlindConfig,
 };
 
 export interface HandLevelData {
@@ -64,19 +77,9 @@ export interface HandLevelData {
   playedCount: number;
 }
 
-export type BlindType = "small" | "big" | "boss";
-
-export interface BossModifier {
-  id: string;
-  name: string;
-  description: string;
-  debuffSuit?: CardSuit;
-  maxHandsAllowed?: number;
-  minCardsRequired?: number;
-}
-
 export type GamePhase =
   | "menu"
+  | "blindSelect"
   | "playing"
   | "scoring"
   | "roundWon"
