@@ -36,6 +36,7 @@ import {
 import { soundEngine } from "@/lib/sound";
 import type { ScoreSlice } from "./scoreSlice";
 import type { JokerSlice } from "./jokerSlice";
+import type { ShopSlice } from "./shopSlice";
 
 export interface GameSlice {
   phase: GamePhase;
@@ -57,6 +58,7 @@ export interface GameSlice {
   hand: PlayingCard[];
   selectedCardIds: string[];
   discardPile: PlayingCard[];
+  lastRoundBonus: { reward: number; handsBonus: number; interest: number } | null;
 
   // Actions
   startGame: (seed?: string) => void;
@@ -79,7 +81,7 @@ export interface GameSlice {
   resetGame: () => void;
 }
 
-export type CombinedStore = GameSlice & ScoreSlice & JokerSlice;
+export type CombinedStore = GameSlice & ScoreSlice & JokerSlice & ShopSlice;
 
 export const createGameSlice: StateCreator<
   CombinedStore,
@@ -106,6 +108,7 @@ export const createGameSlice: StateCreator<
   hand: [],
   selectedCardIds: [],
   discardPile: [],
+  lastRoundBonus: null,
 
   startGame: (seed?: string) => {
     const rawDeck = createStandardDeck();
@@ -135,6 +138,7 @@ export const createGameSlice: StateCreator<
       selectedCardIds: [],
       discardPile: [],
       jokers: [starterJoker],
+      lastRoundBonus: null,
     });
 
     get().setTargetScore(blinds.small.targetScore);
@@ -468,6 +472,7 @@ export const createGameSlice: StateCreator<
     // Determine win/loss condition
     let nextPhase: GamePhase = "playing";
     let earnedMoney = 0;
+    let roundBonus: { reward: number; handsBonus: number; interest: number } | null = null;
 
     if (newRoundScore >= targetScore) {
       if (currentBlinds) {
@@ -480,7 +485,13 @@ export const createGameSlice: StateCreator<
 
       nextPhase = "roundWon";
       const baseReward = currentBlinds ? currentBlinds[blindType].reward : 3;
-      earnedMoney = baseReward + remainingHands;
+      const interest = Math.min(5, Math.floor(money / 5));
+      earnedMoney = baseReward + remainingHands + interest;
+      roundBonus = {
+        reward: baseReward,
+        handsBonus: remainingHands,
+        interest,
+      };
     } else if (remainingHands <= 0) {
       nextPhase = "roundLost";
     }
@@ -494,6 +505,7 @@ export const createGameSlice: StateCreator<
       selectedCardIds: [],
       phase: nextPhase,
       money: money + earnedMoney,
+      lastRoundBonus: roundBonus ?? get().lastRoundBonus,
     });
 
     get().updateScorePreview([], [], []);
@@ -617,6 +629,7 @@ export const createGameSlice: StateCreator<
       hand: [],
       selectedCardIds: [],
       discardPile: [],
+      lastRoundBonus: null,
     });
     get().resetRoundScore();
     get().clearJokers();

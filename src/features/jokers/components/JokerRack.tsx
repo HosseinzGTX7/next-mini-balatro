@@ -38,9 +38,8 @@ export const JokerRack = memo(function JokerRack() {
   };
 
   return (
-    <section className="relative z-20 px-3 sm:px-4 py-2 bg-slate-950/60 border-b border-slate-800/60 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
-        {/* Header Title & Testing Triggers */}
+    <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+      {/* Header Title & Testing Triggers */}
         <div className="flex items-center justify-between w-full sm:w-auto gap-3">
           <div className="flex items-center gap-1.5">
             <Flame className="w-4 h-4 text-amber-500" />
@@ -180,6 +179,5 @@ export const JokerRack = memo(function JokerRack() {
           ))}
         </div>
       </div>
-    </section>
   );
 });

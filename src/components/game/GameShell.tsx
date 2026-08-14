@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Info,
   Coins,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {
   useMoney,
   useRoundScore,
   useTargetScore,
+  useLastRoundBonus,
 } from "@/store/useGameStore";
 import { formatNumber } from "@/lib/utils";
 import { TableBoard } from "@/components/game/TableBoard";
@@ -42,6 +44,7 @@ import { BalatroBackground } from "@/components/game/BalatroBackground";
 import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAnimationOverlay";
 import { JokerRack } from "@/features/jokers/components/JokerRack";
 import { BlindSelectionView, BlindBanner } from "@/features/blinds/components";
+import { ShopView, ConsumablesRack } from "@/features/shop/components";
 import { soundEngine } from "@/lib/sound";
 import { useScreenShake } from "@/lib/useScreenShake";
 
@@ -55,6 +58,7 @@ export function GameShell() {
   const money = useMoney();
   const roundScore = useRoundScore();
   const targetScore = useTargetScore();
+  const lastRoundBonus = useLastRoundBonus();
 
   const [crtEnabled, setCrtEnabled] = useState(true);
   const [soundMuted, setSoundMuted] = useState(soundEngine.getIsMuted());
@@ -65,6 +69,8 @@ export function GameShell() {
   const startGame = useGameStore((state) => state.startGame);
   const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
   const resetGame = useGameStore((state) => state.resetGame);
+  const openShop = useGameStore((state) => state.openShop);
+  const currentBlinds = useGameStore((state) => state.currentBlinds);
 
   const handleSoundToggle = () => {
     const nextMuted = soundEngine.toggleMute();
@@ -212,8 +218,19 @@ export function GameShell() {
         </div>
       </header>
 
-      {/* DYNAMIC JOKER RACK */}
-      {phase !== "menu" && <JokerRack />}
+      {/* DYNAMIC JOKER & CONSUMABLES RACKS */}
+      {phase !== "menu" && (
+        <section className="relative z-20 px-3 sm:px-4 py-2 bg-slate-950/60 border-b border-slate-800/60 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto flex flex-col xl:flex-row items-center justify-between gap-3 xl:gap-4">
+            <div className="flex-1 w-full overflow-x-auto">
+              <JokerRack />
+            </div>
+            <div className="shrink-0 border-t xl:border-t-0 xl:border-l border-slate-800/80 pt-2 xl:pt-0 xl:pl-4">
+              <ConsumablesRack />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* MAIN PLAY AREA & POKER TABLE FELT */}
       <main className="relative z-10 flex-1 flex flex-col justify-between p-4 poker-felt-pattern">
@@ -251,6 +268,9 @@ export function GameShell() {
         ) : phase === "blindSelect" ? (
           /* BLIND SELECTION SCREEN */
           <BlindSelectionView />
+        ) : phase === "shop" ? (
+          /* SHOP SCREEN */
+          <ShopView />
         ) : (
           /* ACTIVE PLAYING BOARD */
           <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-3 sm:gap-4">
@@ -338,23 +358,45 @@ export function GameShell() {
                   <div className="text-right font-mono font-bold text-amber-400">
                     {formatNumber(roundScore)}
                   </div>
-                  <div className="text-left text-slate-400">Unused Hands Bonus:</div>
+                  <div className="text-left text-slate-400">Blind Reward:</div>
+                  <div className="text-right font-mono font-bold text-emerald-400">
+                    +${lastRoundBonus?.reward ?? (currentBlinds ? currentBlinds[blindType].reward : 3)}
+                  </div>
+                  <div className="text-left text-slate-400">Unused Hands:</div>
                   <div className="text-right font-mono font-bold text-blue-400">
-                    +${hands}
+                    +${lastRoundBonus?.handsBonus ?? hands}
+                  </div>
+                  <div className="text-left text-slate-400">Interest Earned:</div>
+                  <div className="text-right font-mono font-bold text-amber-400">
+                    +${lastRoundBonus?.interest ?? 0}
                   </div>
                 </div>
 
-                <Button
-                  variant="balatroGold"
-                  size="lg"
-                  onClick={() => {
-                    soundEngine.playCashChime();
-                    advanceToNextBlind();
-                  }}
-                  className="w-full py-5 text-base font-black tracking-wider"
-                >
-                  NEXT BLIND
-                </Button>
+                <div className="flex flex-col gap-2 w-full pt-1">
+                  <Button
+                    variant="balatroGold"
+                    size="lg"
+                    onClick={() => {
+                      soundEngine.playCashChime();
+                      openShop();
+                    }}
+                    className="w-full py-5 text-base font-black tracking-wider flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag className="w-5 h-5" /> VISIT SHOP
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      soundEngine.playCashChime();
+                      advanceToNextBlind();
+                    }}
+                    className="w-full py-2.5 text-xs text-slate-400 border-slate-700 hover:text-white"
+                  >
+                    Skip Shop & Next Blind &rarr;
+                  </Button>
+                </div>
               </motion.div>
             </div>
           )}
