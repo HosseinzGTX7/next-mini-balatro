@@ -44,3 +44,5 @@ export const useShopItems = () => useGameStore((state) => state.shopItems);
 export const useShopPacks = () => useGameStore((state) => state.shopPacks);
 export const useRerollCost = () => useGameStore((state) => state.rerollCost);
 export const useActivePackSession = () => useGameStore((state) => state.activePackSession);
+export const useRunStats = () => useGameStore((state) => state.runStats);
+export const useSeed = () => useGameStore((state) => state.seed);

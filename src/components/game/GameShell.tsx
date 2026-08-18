@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   Trophy,
-  Flame,
   Volume2,
   VolumeX,
   Tv,
@@ -36,6 +35,7 @@ import {
   useRoundScore,
   useTargetScore,
   useLastRoundBonus,
+  useSeed,
 } from "@/store/useGameStore";
 import { formatNumber } from "@/lib/utils";
 import { TableBoard } from "@/components/game/TableBoard";
@@ -45,6 +45,11 @@ import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAn
 import { JokerRack } from "@/features/jokers/components/JokerRack";
 import { BlindSelectionView, BlindBanner } from "@/features/blinds/components";
 import { ShopView, ConsumablesRack } from "@/features/shop/components";
+import {
+  StartMenuView,
+  VictoryScreen,
+  GameOverScreen,
+} from "@/features/run/components";
 import { soundEngine } from "@/lib/sound";
 import { useScreenShake } from "@/lib/useScreenShake";
 
@@ -53,6 +58,7 @@ export function GameShell() {
   const ante = useAnte();
   const round = useRound();
   const blindType = useBlindType();
+  const seed = useSeed();
   const hands = useHandsRemaining();
   const discards = useDiscardsRemaining();
   const money = useMoney();
@@ -66,7 +72,6 @@ export function GameShell() {
   const isShaking = useScreenShake((state) => state.isShaking);
   const shakeIntensity = useScreenShake((state) => state.intensity);
 
-  const startGame = useGameStore((state) => state.startGame);
   const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
   const resetGame = useGameStore((state) => state.resetGame);
   const openShop = useGameStore((state) => state.openShop);
@@ -139,6 +144,13 @@ export function GameShell() {
 
         {/* Header Controls */}
         <div className="flex items-center gap-2">
+          {phase !== "menu" && seed && (
+            <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[10px] font-mono text-slate-400">
+              <span className="text-slate-500 font-bold uppercase">Seed:</span>
+              <span className="font-bold text-amber-400">{seed}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/30 border border-amber-500/40 rounded-lg text-amber-400 font-black text-sm shadow-inner">
             <Coins className="w-4 h-4 text-amber-400" />
             <span>${money}</span>
@@ -236,35 +248,7 @@ export function GameShell() {
       <main className="relative z-10 flex-1 flex flex-col justify-between p-4 poker-felt-pattern">
         {phase === "menu" ? (
           /* START SCREEN */
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="max-w-lg p-8 rounded-2xl bg-slate-950/90 border-2 border-slate-800 shadow-2xl backdrop-blur-xl"
-            >
-              <div className="inline-block p-4 rounded-full bg-red-950/40 border border-red-500/40 mb-4 text-red-400">
-                <Trophy className="w-12 h-12" />
-              </div>
-              <h1 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-blue-500 uppercase mb-3">
-                Mini-Balatro
-              </h1>
-              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                The hypnotic roguelike poker deckbuilder. Combine poker hands with game-changing Jokers to generate astronomical multipliers.
-              </p>
-              <Button
-                variant="balatroBlue"
-                size="lg"
-                onClick={() => {
-                  soundEngine.playCardDeal();
-                  startGame();
-                }}
-                className="w-full text-lg py-6 font-black tracking-widest"
-              >
-                PLAY RUN
-              </Button>
-            </motion.div>
-          </div>
+          <StartMenuView />
         ) : phase === "blindSelect" ? (
           /* BLIND SELECTION SCREEN */
           <BlindSelectionView />
@@ -402,102 +386,14 @@ export function GameShell() {
           )}
         </AnimatePresence>
 
-        {/* ROUND LOST (GAME OVER) MODAL OVERLAY */}
+        {/* ROUND LOST (GAME OVER) SCREEN */}
         <AnimatePresence>
-          {phase === "roundLost" && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-red-500/80 shadow-2xl text-center flex flex-col items-center gap-4"
-              >
-                <div className="p-3 rounded-full bg-red-500/20 text-red-500 border border-red-500/40">
-                  <Flame className="w-10 h-10" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-red-500 uppercase tracking-wider">
-                    Run Defeated
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    You ran out of hands before reaching the target score.
-                  </p>
-                </div>
-
-                <div className="w-full grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm">
-                  <div className="text-left text-slate-400">Final Score:</div>
-                  <div className="text-right font-mono font-bold text-red-400">
-                    {formatNumber(roundScore)}
-                  </div>
-                  <div className="text-left text-slate-400">Required:</div>
-                  <div className="text-right font-mono font-bold text-slate-200">
-                    {formatNumber(targetScore)}
-                  </div>
-                </div>
-
-                <Button
-                  variant="balatroRed"
-                  size="lg"
-                  onClick={() => {
-                    soundEngine.playCardDeal();
-                    resetGame();
-                  }}
-                  className="w-full py-5 text-base font-black tracking-wider"
-                >
-                  TRY AGAIN
-                </Button>
-              </motion.div>
-            </div>
-          )}
+          {phase === "roundLost" && <GameOverScreen />}
         </AnimatePresence>
 
-        {/* RUN WON (VICTORY) MODAL OVERLAY */}
+        {/* RUN WON (VICTORY) CELEBRATION SCREEN */}
         <AnimatePresence>
-          {phase === "gameWon" && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-amber-400 shadow-2xl text-center flex flex-col items-center gap-4"
-              >
-                <div className="p-4 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                  <Trophy className="w-12 h-12 text-amber-400" />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 uppercase tracking-wider">
-                    VICTORY!
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-1 font-semibold">
-                    You conquered all 8 Antes and defeated every Boss Blind!
-                  </p>
-                </div>
-
-                <div className="w-full bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm space-y-1">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Ante Cleared:</span>
-                    <span className="font-mono font-bold text-amber-400">8 / 8</span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Total Bankroll:</span>
-                    <span className="font-mono font-bold text-emerald-400">${money}</span>
-                  </div>
-                </div>
-
-                <Button
-                  variant="balatroGold"
-                  size="lg"
-                  onClick={() => {
-                    soundEngine.playCardDeal();
-                    resetGame();
-                  }}
-                  className="w-full py-5 text-base font-black tracking-wider"
-                >
-                  PLAY NEW RUN
-                </Button>
-              </motion.div>
-            </div>
-          )}
+          {phase === "gameWon" && <VictoryScreen />}
         </AnimatePresence>
       </main>
 

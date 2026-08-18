@@ -8,6 +8,9 @@ import {
   BossModifier,
   SkipTag,
   PokerHandName,
+  RunStats,
+  SavedRunState,
+  HandLevelData,
 } from "@/types";
 import {
   MAX_HAND_SIZE,
@@ -33,6 +36,12 @@ import {
   applyBossBlindToCards,
   canPlayHandAgainstBoss,
 } from "@/features/blinds/services/blind-engine.service";
+import { generateBalatroSeed } from "@/features/run/services/seed.service";
+import {
+  saveCurrentRun,
+  clearCurrentRun,
+  recordRunCompletion,
+} from "@/features/run/services/persistence.service";
 import { soundEngine } from "@/lib/sound";
 import type { ScoreSlice } from "./scoreSlice";
 import type { JokerSlice } from "./jokerSlice";
@@ -53,15 +62,19 @@ export interface GameSlice {
   handsRemaining: number;
   discardsRemaining: number;
   money: number;
-  seed?: string;
+  seed: string;
   deck: PlayingCard[];
   hand: PlayingCard[];
   selectedCardIds: string[];
   discardPile: PlayingCard[];
   lastRoundBonus: { reward: number; handsBonus: number; interest: number } | null;
+  runStats: RunStats;
 
   // Actions
   startGame: (seed?: string) => void;
+  loadSavedRun: (saved: SavedRunState) => void;
+  restartWithSameSeed: () => void;
+  abandonRun: () => void;
   selectBlind: (blindType: BlindType) => void;
   skipBlind: (blindType: "small" | "big") => void;
   setBlindWarningMessage: (message: string | null) => void;
@@ -83,6 +96,54 @@ export interface GameSlice {
 
 export type CombinedStore = GameSlice & ScoreSlice & JokerSlice & ShopSlice;
 
+const DEFAULT_RUN_STATS: RunStats = {
+  handsPlayed: 0,
+  discardsUsed: 0,
+  cardsPlayed: 0,
+  rerollsCount: 0,
+  highestHandScore: 0,
+  bestHandType: null,
+  totalMoneyEarned: 0,
+  startTime: 0,
+};
+
+function persistActiveRun(state: CombinedStore) {
+  if (state.phase === "menu" || state.phase === "gameWon" || state.phase === "roundLost") {
+    return;
+  }
+  saveCurrentRun({
+    version: 1,
+    savedAt: Date.now(),
+    phase: state.phase,
+    ante: state.ante,
+    round: state.round,
+    blindType: state.blindType,
+    currentBlinds: state.currentBlinds,
+    activeBossModifier: state.activeBossModifier,
+    playedHandsThisRound: state.playedHandsThisRound,
+    lockedHandTypeThisRound: state.lockedHandTypeThisRound,
+    playedCardIdsThisAnte: state.playedCardIdsThisAnte,
+    currentSkipTags: state.currentSkipTags,
+    handsRemaining: state.handsRemaining,
+    discardsRemaining: state.discardsRemaining,
+    money: state.money,
+    seed: state.seed,
+    deck: state.deck,
+    hand: state.hand,
+    discardPile: state.discardPile,
+    selectedCardIds: state.selectedCardIds,
+    jokers: state.jokers,
+    consumables: state.consumables,
+    shopItems: state.shopItems,
+    shopPacks: state.shopPacks,
+    rerollCost: state.rerollCost,
+    targetScore: state.targetScore,
+    roundScore: state.roundScore,
+    handLevels: state.handLevels,
+    runStats: state.runStats,
+  });
+}
+
 export const createGameSlice: StateCreator<
   CombinedStore,
   [],
@@ -103,19 +164,36 @@ export const createGameSlice: StateCreator<
   handsRemaining: INITIAL_HANDS,
   discardsRemaining: INITIAL_DISCARDS,
   money: INITIAL_MONEY,
-  seed: undefined,
+  seed: "",
   deck: [],
   hand: [],
   selectedCardIds: [],
   discardPile: [],
   lastRoundBonus: null,
+  runStats: { ...DEFAULT_RUN_STATS },
 
-  startGame: (seed?: string) => {
+  startGame: (customSeed?: string) => {
+    const activeSeed =
+      customSeed && customSeed.trim().length > 0
+        ? customSeed.trim().toUpperCase()
+        : generateBalatroSeed();
+
     const rawDeck = createStandardDeck();
-    const shuffled = shuffleDeck(rawDeck, seed);
+    const shuffled = shuffleDeck(rawDeck, activeSeed);
     const { hand: initialHand, remainingDeck } = dealInitialHand(shuffled, MAX_HAND_SIZE);
     const starterJoker = createJoker("joker");
     const blinds = generateAnteBlinds(1);
+
+    const initialStats: RunStats = {
+      handsPlayed: 0,
+      discardsUsed: 0,
+      cardsPlayed: 0,
+      rerollsCount: 0,
+      highestHandScore: 0,
+      bestHandType: null,
+      totalMoneyEarned: 0,
+      startTime: Date.now(),
+    };
 
     set({
       phase: "blindSelect",
@@ -132,17 +210,63 @@ export const createGameSlice: StateCreator<
       handsRemaining: INITIAL_HANDS,
       discardsRemaining: INITIAL_DISCARDS,
       money: INITIAL_MONEY,
-      seed,
+      seed: activeSeed,
       deck: remainingDeck,
       hand: initialHand,
       selectedCardIds: [],
       discardPile: [],
       jokers: [starterJoker],
+      consumables: [],
+      shopItems: [],
+      shopPacks: [],
       lastRoundBonus: null,
+      runStats: initialStats,
     });
 
     get().setTargetScore(blinds.small.targetScore);
     get().resetRoundScore();
+    persistActiveRun(get());
+  },
+
+  loadSavedRun: (saved: SavedRunState) => {
+    set({
+      phase: saved.phase,
+      ante: saved.ante,
+      round: saved.round,
+      blindType: saved.blindType,
+      currentBlinds: saved.currentBlinds,
+      activeBossModifier: saved.activeBossModifier,
+      playedHandsThisRound: saved.playedHandsThisRound,
+      lockedHandTypeThisRound: saved.lockedHandTypeThisRound,
+      playedCardIdsThisAnte: saved.playedCardIdsThisAnte,
+      currentSkipTags: saved.currentSkipTags,
+      handsRemaining: saved.handsRemaining,
+      discardsRemaining: saved.discardsRemaining,
+      money: saved.money,
+      seed: saved.seed,
+      deck: saved.deck,
+      hand: saved.hand,
+      discardPile: saved.discardPile,
+      selectedCardIds: saved.selectedCardIds,
+      jokers: saved.jokers,
+      consumables: saved.consumables,
+      shopItems: saved.shopItems,
+      shopPacks: saved.shopPacks,
+      rerollCost: saved.rerollCost,
+      handLevels: saved.handLevels as Record<PokerHandName, HandLevelData>,
+      runStats: saved.runStats,
+    });
+    get().setTargetScore(saved.targetScore);
+    set({ roundScore: saved.roundScore });
+  },
+
+  restartWithSameSeed: () => {
+    const s = get().seed;
+    get().startGame(s);
+  },
+
+  abandonRun: () => {
+    get().resetGame();
   },
 
   selectBlind: (blindType: BlindType) => {
@@ -195,6 +319,7 @@ export const createGameSlice: StateCreator<
     get().setTargetScore(blind.targetScore);
     get().resetRoundScore();
     get().updateScorePreview([], debuffedHand);
+    persistActiveRun(get());
   },
 
   skipBlind: (blindType: "small" | "big") => {
@@ -339,6 +464,8 @@ export const createGameSlice: StateCreator<
         )
       : debuffedHand;
 
+    const { runStats } = get();
+
     set({
       discardsRemaining: discardsRemaining - 1,
       hand: finalHand,
@@ -346,9 +473,14 @@ export const createGameSlice: StateCreator<
       discardPile: newDiscardPile,
       selectedCardIds: [],
       blindWarningMessage: null,
+      runStats: {
+        ...runStats,
+        discardsUsed: runStats.discardsUsed + 1,
+      },
     });
 
     get().updateScorePreview([], [], []);
+    persistActiveRun(get());
   },
 
   playSelectedHand: () => {
@@ -411,12 +543,26 @@ export const createGameSlice: StateCreator<
       ? [...get().playedCardIdsThisAnte, ...selectedCardIds]
       : get().playedCardIdsThisAnte;
 
+    const { runStats } = get();
+    const nextHighest = Math.max(runStats.highestHandScore, result.totalHandScore);
+    const nextBestType =
+      result.totalHandScore >= runStats.highestHandScore
+        ? result.evaluation.handName
+        : runStats.bestHandType;
+
     set({
       phase: "scoring",
       blindWarningMessage: null,
       playedHandsThisRound: newPlayedHands,
       lockedHandTypeThisRound: newLocked,
       playedCardIdsThisAnte: newPlayedCardIds,
+      runStats: {
+        ...runStats,
+        handsPlayed: runStats.handsPlayed + 1,
+        cardsPlayed: runStats.cardsPlayed + selectedCardIds.length,
+        highestHandScore: nextHighest,
+        bestHandType: nextBestType,
+      },
     });
 
     get().startScoringAnimation(result, playedCards);
@@ -494,6 +640,18 @@ export const createGameSlice: StateCreator<
       };
     } else if (remainingHands <= 0) {
       nextPhase = "roundLost";
+      soundEngine.playDefeatSound();
+    }
+
+    const { runStats, ante } = get();
+    const updatedRunStats: RunStats = {
+      ...runStats,
+      totalMoneyEarned: runStats.totalMoneyEarned + earnedMoney,
+    };
+
+    if (nextPhase === "roundLost") {
+      recordRunCompletion(false, updatedRunStats, ante);
+      clearCurrentRun();
     }
 
     set({
@@ -506,10 +664,15 @@ export const createGameSlice: StateCreator<
       phase: nextPhase,
       money: money + earnedMoney,
       lastRoundBonus: roundBonus ?? get().lastRoundBonus,
+      runStats: updatedRunStats,
     });
 
     get().updateScorePreview([], [], []);
     get().endScoringAnimation();
+
+    if (nextPhase === "roundWon") {
+      persistActiveRun(get());
+    }
   },
 
   drawCards: (count?: number) => {
@@ -576,6 +739,8 @@ export const createGameSlice: StateCreator<
     if (blindType === "boss") {
       if (ante >= MAX_ANTE) {
         soundEngine.playWinFanfare();
+        recordRunCompletion(true, get().runStats, 8);
+        clearCurrentRun();
         set({ phase: "gameWon" });
         return;
       }
@@ -594,6 +759,7 @@ export const createGameSlice: StateCreator<
         lockedHandTypeThisRound: null,
         phase: "blindSelect",
       });
+      persistActiveRun(get());
       return;
     }
 
@@ -606,9 +772,11 @@ export const createGameSlice: StateCreator<
       round: nextRound,
       phase: "blindSelect",
     });
+    persistActiveRun(get());
   },
 
   resetGame: () => {
+    clearCurrentRun();
     set({
       phase: "menu",
       ante: 1,
@@ -624,12 +792,13 @@ export const createGameSlice: StateCreator<
       handsRemaining: INITIAL_HANDS,
       discardsRemaining: INITIAL_DISCARDS,
       money: INITIAL_MONEY,
-      seed: undefined,
+      seed: "",
       deck: [],
       hand: [],
       selectedCardIds: [],
       discardPile: [],
       lastRoundBonus: null,
+      runStats: { ...DEFAULT_RUN_STATS },
     });
     get().resetRoundScore();
     get().clearJokers();

@@ -96,3 +96,9 @@ export interface ScoreState {
   scoringStep: number;
   isScoringActive: boolean;
 }
+
+export type {
+  RunStats,
+  CareerStats,
+  SavedRunState,
+} from "@/features/run/schemas/run.schema";
