@@ -326,7 +326,7 @@ export function GameShell() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-amber-400 uppercase tracking-wider">
-                    Blind Defeated!
+                    Round Victory!
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
                     You beat the {blindType} blind with {formatNumber(roundScore)} points.
