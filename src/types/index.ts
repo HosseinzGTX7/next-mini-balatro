@@ -1,63 +1,74 @@
-export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
+import type {
+  CardSuit,
+  CardRank,
+  CardEnhancement,
+  CardEdition,
+  CardSeal,
+  PlayingCard,
+} from "@/features/poker/schemas/card.schema";
 
-export type CardRank =
-  | "2"
-  | "3"
-  | "4"
-  | "5"
-  | "6"
-  | "7"
-  | "8"
-  | "9"
-  | "10"
-  | "J"
-  | "Q"
-  | "K"
-  | "A";
+import type {
+  Deck,
+  SortCriterion,
+  CardSelectionPayload,
+  DiscardPayload,
+  PlayHandPayload,
+  DrawPayload,
+} from "@/features/poker/schemas/deck.schema";
 
-export type CardEnhancement =
-  | "none"
-  | "bonus" // +30 extra chips
-  | "mult" // +4 extra mult
-  | "wild" // Counts as any suit
-  | "glass" // X2 Mult, 1 in 4 chance to destroy
-  | "steel" // X1.5 Mult while held in hand
-  | "stone" // +50 Chips, no rank or suit
-  | "gold"; // +$3 if held in hand at end of round
+import type {
+  PokerHandName,
+  ScoringStepEvent,
+  HandEvaluationResult,
+  HandScoreBreakdown,
+} from "@/features/scoring/schemas/scoring.schema";
 
-export type CardEdition =
-  | "base"
-  | "foil" // +50 Chips
-  | "holographic" // +10 Mult
-  | "polychrome"; // X1.5 Mult
+import type {
+  JokerRarity,
+  JokerTriggerType,
+  JokerEffectType,
+  JokerCondition,
+  JokerTemplate,
+  JokerItem,
+} from "@/features/jokers/schemas/joker.schema";
 
-export type CardSeal = "none" | "gold" | "red" | "blue" | "purple";
+import type {
+  BlindType,
+  BossModifier,
+  SkipTag,
+  SkipTagType,
+  BlindConfig,
+} from "@/features/blinds/schemas/blind.schema";
 
-export interface PlayingCard {
-  id: string;
-  suit: CardSuit;
-  rank: CardRank;
-  chipValue: number;
-  enhancement: CardEnhancement;
-  edition: CardEdition;
-  seal: CardSeal;
-  isDebuffed?: boolean;
-}
-
-export type PokerHandName =
-  | "High Card"
-  | "Pair"
-  | "Two Pair"
-  | "Three of a Kind"
-  | "Straight"
-  | "Flush"
-  | "Full House"
-  | "Four of a Kind"
-  | "Straight Flush"
-  | "Royal Flush"
-  | "Five of a Kind"
-  | "Flush House"
-  | "Flush Five";
+export type {
+  CardSuit,
+  CardRank,
+  CardEnhancement,
+  CardEdition,
+  CardSeal,
+  PlayingCard,
+  Deck,
+  SortCriterion,
+  CardSelectionPayload,
+  DiscardPayload,
+  PlayHandPayload,
+  DrawPayload,
+  PokerHandName,
+  ScoringStepEvent,
+  HandEvaluationResult,
+  HandScoreBreakdown,
+  JokerRarity,
+  JokerTriggerType,
+  JokerEffectType,
+  JokerCondition,
+  JokerTemplate,
+  JokerItem,
+  BlindType,
+  BossModifier,
+  SkipTag,
+  SkipTagType,
+  BlindConfig,
+};
 
 export interface HandLevelData {
   level: number;
@@ -66,37 +77,9 @@ export interface HandLevelData {
   playedCount: number;
 }
 
-export type BlindType = "small" | "big" | "boss";
-
-export interface BossModifier {
-  id: string;
-  name: string;
-  description: string;
-  debuffSuit?: CardSuit;
-  maxHandsAllowed?: number;
-  minCardsRequired?: number;
-}
-
-export type JokerRarity = "common" | "uncommon" | "rare" | "legendary";
-
-export interface JokerItem {
-  id: string;
-  name: string;
-  rarity: JokerRarity;
-  cost: number;
-  sellValue: number;
-  description: string;
-  edition?: CardEdition;
-  // Trigger logic hook keys
-  triggerType: "onHandPlayed" | "onCardScored" | "onDiscard" | "passive" | "roundEnd";
-  plusChips?: number;
-  plusMult?: number;
-  timesMult?: number;
-  customData?: Record<string, unknown>;
-}
-
 export type GamePhase =
   | "menu"
+  | "blindSelect"
   | "playing"
   | "scoring"
   | "roundWon"
@@ -113,3 +96,9 @@ export interface ScoreState {
   scoringStep: number;
   isScoringActive: boolean;
 }
+
+export type {
+  RunStats,
+  CareerStats,
+  SavedRunState,
+} from "@/features/run/schemas/run.schema";

@@ -5,14 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   Trophy,
-  Flame,
   Volume2,
   VolumeX,
   Tv,
   RotateCcw,
   Info,
-  Layers,
   Coins,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,53 +34,85 @@ import {
   useMoney,
   useRoundScore,
   useTargetScore,
-  useHandChips,
-  useHandMult,
-  useJokers,
-  useMaxJokers,
-  useHand,
-  useSelectedCardIds,
-  useDeckCount,
+  useLastRoundBonus,
+  useSeed,
 } from "@/store/useGameStore";
 import { formatNumber } from "@/lib/utils";
+import { TableBoard } from "@/components/game/TableBoard";
+import { HandView } from "@/features/poker/components/HandView";
+import { BalatroBackground } from "@/components/game/BalatroBackground";
+import { ScoringAnimationOverlay } from "@/features/scoring/components/ScoringAnimationOverlay";
+import { JokerRack } from "@/features/jokers/components/JokerRack";
+import { BlindSelectionView, BlindBanner } from "@/features/blinds/components";
+import { ShopView, ConsumablesRack } from "@/features/shop/components";
+import {
+  StartMenuView,
+  VictoryScreen,
+  GameOverScreen,
+} from "@/features/run/components";
+import { soundEngine } from "@/lib/sound";
+import { useScreenShake } from "@/lib/useScreenShake";
 
 export function GameShell() {
   const phase = useGamePhase();
   const ante = useAnte();
   const round = useRound();
   const blindType = useBlindType();
+  const seed = useSeed();
   const hands = useHandsRemaining();
   const discards = useDiscardsRemaining();
   const money = useMoney();
   const roundScore = useRoundScore();
   const targetScore = useTargetScore();
-  const chips = useHandChips();
-  const mult = useHandMult();
-  const jokers = useJokers();
-  const maxJokers = useMaxJokers();
-  const hand = useHand();
-  const selectedIds = useSelectedCardIds();
-  const deckCount = useDeckCount();
+  const lastRoundBonus = useLastRoundBonus();
 
   const [crtEnabled, setCrtEnabled] = useState(true);
-  const [soundMuted, setSoundMuted] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(soundEngine.getIsMuted());
 
-  const startGame = useGameStore((state) => state.startGame);
-  const toggleCardSelection = useGameStore((state) => state.toggleCardSelection);
-  const discardSelected = useGameStore((state) => state.discardSelectedCards);
+  const isShaking = useScreenShake((state) => state.isShaking);
+  const shakeIntensity = useScreenShake((state) => state.intensity);
+
+  const advanceToNextBlind = useGameStore((state) => state.advanceToNextBlind);
   const resetGame = useGameStore((state) => state.resetGame);
+  const openShop = useGameStore((state) => state.openShop);
+  const currentBlinds = useGameStore((state) => state.currentBlinds);
+
+  const handleSoundToggle = () => {
+    const nextMuted = soundEngine.toggleMute();
+    setSoundMuted(nextMuted);
+    if (!nextMuted) {
+      soundEngine.playCardSelect();
+    }
+  };
 
   const scoreProgress = Math.min(100, Math.round((roundScore / (targetScore || 1)) * 100));
 
   return (
-    <div className="relative min-h-screen w-full bg-[#0d1217] text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans">
+    <motion.div
+      animate={
+        isShaking
+          ? {
+              x: shakeIntensity === "heavy" ? [-6, 6, -4, 4, -2, 2, 0] : [-3, 3, -2, 2, 0],
+              y: shakeIntensity === "heavy" ? [4, -4, 3, -3, -1, 1, 0] : [2, -2, 1, -1, 0],
+            }
+          : { x: 0, y: 0 }
+      }
+      transition={{ duration: 0.25 }}
+      className="relative min-h-screen w-full bg-[#0b0f14] text-slate-100 flex flex-col justify-between overflow-hidden select-none font-sans"
+    >
+      {/* Dynamic Swirling Psychedelic Balatro Vortex Background */}
+      <BalatroBackground />
+
       {/* CRT Scanline & Vignette Effects */}
       {crtEnabled && (
         <>
-          <div className="balatro-crt-overlay fixed inset-0 z-40 pointer-events-none opacity-40" />
+          <div className="balatro-crt-overlay fixed inset-0 z-40 pointer-events-none opacity-30" />
           <div className="balatro-vignette fixed inset-0 z-40 pointer-events-none" />
         </>
       )}
+
+      {/* Step-by-Step Sequential Scoring Animation Overlay */}
+      <ScoringAnimationOverlay />
 
       {/* TOP BAR / HEADER */}
       <header className="relative z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-md">
@@ -113,6 +144,13 @@ export function GameShell() {
 
         {/* Header Controls */}
         <div className="flex items-center gap-2">
+          {phase !== "menu" && seed && (
+            <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[10px] font-mono text-slate-400">
+              <span className="text-slate-500 font-bold uppercase">Seed:</span>
+              <span className="font-bold text-amber-400">{seed}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/30 border border-amber-500/40 rounded-lg text-amber-400 font-black text-sm shadow-inner">
             <Coins className="w-4 h-4 text-amber-400" />
             <span>${money}</span>
@@ -133,7 +171,7 @@ export function GameShell() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSoundMuted(!soundMuted)}
+            onClick={handleSoundToggle}
             className="h-8 w-8 text-xs text-slate-400 hover:text-white"
             title="Toggle Retro Synthesizer Audio"
           >
@@ -192,86 +230,41 @@ export function GameShell() {
         </div>
       </header>
 
-      {/* JOKER SLOTS BAR */}
-      <section className="relative z-20 px-4 py-2 bg-slate-950/40 border-b border-slate-800/40">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-amber-500" /> Jokers ({jokers.length}/{maxJokers})
-            </span>
+      {/* DYNAMIC JOKER & CONSUMABLES RACKS */}
+      {phase !== "menu" && (
+        <section className="relative z-20 px-3 sm:px-4 py-2 bg-slate-950/60 border-b border-slate-800/60 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto flex flex-col xl:flex-row items-center justify-between gap-3 xl:gap-4">
+            <div className="flex-1 w-full overflow-x-auto">
+              <JokerRack />
+            </div>
+            <div className="shrink-0 border-t xl:border-t-0 xl:border-l border-slate-800/80 pt-2 xl:pt-0 xl:pl-4">
+              <ConsumablesRack />
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            {Array.from({ length: maxJokers }).map((_, idx) => {
-              const joker = jokers[idx];
-              return (
-                <div
-                  key={idx}
-                  className={`w-20 h-28 sm:w-24 sm:h-32 rounded-lg border-2 flex flex-col items-center justify-center p-2 text-center transition-all ${
-                    joker
-                      ? "border-amber-500/80 bg-gradient-to-b from-amber-950/40 to-slate-900 shadow-md shadow-amber-900/30"
-                      : "border-dashed border-slate-800/80 bg-slate-900/20 text-slate-700"
-                  }`}
-                >
-                  {joker ? (
-                    <div className="flex flex-col items-center justify-between h-full w-full">
-                      <span className="text-[10px] uppercase font-bold text-amber-300 line-clamp-2">
-                        {joker.name}
-                      </span>
-                      <span className="text-[9px] text-slate-400 line-clamp-3">
-                        {joker.description}
-                      </span>
-                      <Badge variant="outline" className="text-[8px] py-0 px-1 border-amber-500/30 text-amber-400">
-                        ${joker.sellValue}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <span className="text-[11px] font-semibold text-slate-600">Empty</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* MAIN PLAY AREA & POKER TABLE FELT */}
       <main className="relative z-10 flex-1 flex flex-col justify-between p-4 poker-felt-pattern">
         {phase === "menu" ? (
           /* START SCREEN */
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="max-w-lg p-8 rounded-2xl bg-slate-950/90 border-2 border-slate-800 shadow-2xl backdrop-blur-xl"
-            >
-              <div className="inline-block p-4 rounded-full bg-red-950/40 border border-red-500/40 mb-4 text-red-400">
-                <Trophy className="w-12 h-12" />
-              </div>
-              <h1 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-blue-500 uppercase mb-3">
-                Mini-Balatro
-              </h1>
-              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                The hypnotic roguelike poker deckbuilder. Combine poker hands with game-changing Jokers to generate astronomical multipliers.
-              </p>
-              <Button
-                variant="balatroBlue"
-                size="lg"
-                onClick={startGame}
-                className="w-full text-lg py-6 font-black tracking-widest"
-              >
-                PLAY RUN
-              </Button>
-            </motion.div>
-          </div>
+          <StartMenuView />
+        ) : phase === "blindSelect" ? (
+          /* BLIND SELECTION SCREEN */
+          <BlindSelectionView />
+        ) : phase === "shop" ? (
+          /* SHOP SCREEN */
+          <ShopView />
         ) : (
           /* ACTIVE PLAYING BOARD */
-          <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-4">
-            {/* SCORE TARGET DASHBOARD */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md shadow-xl">
+          <div className="w-full max-w-6xl mx-auto flex flex-col flex-1 justify-between gap-3 sm:gap-4">
+            {/* ACTIVE BLIND & BOSS MODIFIER BANNER */}
+            <BlindBanner />
+
+            {/* SCORE TARGET & RESOURCES DASHBOARD */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md shadow-xl">
               {/* Target & Current Round Score */}
-              <div className="flex flex-col justify-center gap-1 border-r border-slate-800/60 pr-4">
+              <div className="flex flex-col justify-center gap-1 border-r-0 md:border-r border-slate-800/60 pr-0 md:pr-4">
                 <div className="flex items-center justify-between text-xs text-slate-400 uppercase font-semibold">
                   <span>Round Score</span>
                   <span>Goal: {formatNumber(targetScore)}</span>
@@ -289,7 +282,7 @@ export function GameShell() {
               </div>
 
               {/* Hands & Discards Count */}
-              <div className="flex items-center justify-around border-r border-slate-800/60 px-4">
+              <div className="flex items-center justify-around px-4">
                 <div className="text-center">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block mb-1">
                     Hands
@@ -308,173 +301,106 @@ export function GameShell() {
                   </span>
                 </div>
               </div>
-
-              {/* Hand Score Preview (Chips X Mult) */}
-              <div className="flex items-center justify-center gap-3 pl-4">
-                <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-lg bg-blue-950/80 border border-blue-500/60 text-center">
-                    <span className="text-[10px] uppercase font-bold text-blue-300 block">Chips</span>
-                    <span className="text-lg font-black text-[#009dff]">{chips}</span>
-                  </div>
-                  <span className="text-xl font-black text-slate-500">&times;</span>
-                  <div className="px-3 py-1.5 rounded-lg bg-red-950/80 border border-red-500/60 text-center">
-                    <span className="text-[10px] uppercase font-bold text-red-300 block">Mult</span>
-                    <span className="text-lg font-black text-[#fe5f55]">{mult}</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* FELT PLAY MAT / SELECTED CARDS PREVIEW */}
-            <div className="flex-1 flex items-center justify-center min-h-[160px] py-4">
-              <div className="w-full h-full border-2 border-dashed border-emerald-900/60 rounded-2xl flex flex-col items-center justify-center p-4 bg-emerald-950/10 backdrop-blur-xs">
-                {selectedIds.length === 0 ? (
-                  <p className="text-xs sm:text-sm font-semibold text-emerald-300/50 uppercase tracking-widest">
-                    Select up to 5 cards to play or discard
-                  </p>
-                ) : (
-                  <div className="flex items-center gap-2 flex-wrap justify-center">
-                    {hand
-                      .filter((c) => selectedIds.includes(c.id))
-                      .map((card) => (
-                        <div
-                          key={card.id}
-                          className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg bg-[#f6f3e8] text-slate-900 border-2 border-amber-400 shadow-lg flex flex-col justify-between p-1.5 font-bold"
-                        >
-                          <span
-                            className={`text-xs ${
-                              card.suit === "hearts" || card.suit === "diamonds"
-                                ? "text-red-600"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {card.rank}
-                          </span>
-                          <span
-                            className={`text-base self-center ${
-                              card.suit === "hearts" || card.suit === "diamonds"
-                                ? "text-red-600"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {card.suit === "hearts"
-                              ? "♥"
-                              : card.suit === "diamonds"
-                              ? "♦"
-                              : card.suit === "clubs"
-                              ? "♣"
-                              : "♠"}
-                          </span>
-                          <span className="text-[10px] self-end text-blue-600 font-mono">
-                            +{card.chipValue}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* MODULAR TABLE BOARD (Staged Cards & Live Score Forecast) */}
+            <TableBoard />
 
-            {/* HAND OF CARDS RACK */}
-            <div className="w-full flex flex-col items-center gap-4">
-              <div className="flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap max-w-4xl px-2">
-                <AnimatePresence>
-                  {hand.map((card) => {
-                    const isSelected = selectedIds.includes(card.id);
-                    const isRedSuit = card.suit === "hearts" || card.suit === "diamonds";
-
-                    return (
-                      <motion.button
-                        key={card.id}
-                        type="button"
-                        onClick={() => toggleCardSelection(card.id)}
-                        whileHover={{ y: -8, scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        animate={{
-                          y: isSelected ? -20 : 0,
-                          borderColor: isSelected ? "#38bdf8" : "#2a3439",
-                        }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                        className={`w-14 h-22 sm:w-18 sm:h-28 rounded-lg bg-[#f6f3e8] border-2 shadow-md flex flex-col justify-between p-2 cursor-pointer transition-shadow ${
-                          isSelected
-                            ? "shadow-blue-500/50 ring-2 ring-blue-400 shadow-xl"
-                            : "hover:shadow-lg"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className={`text-sm font-black ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
-                            {card.rank}
-                          </span>
-                          <span className={`text-xs ${isRedSuit ? "text-red-600" : "text-slate-900"}`}>
-                            {card.suit === "hearts"
-                              ? "♥"
-                              : card.suit === "diamonds"
-                              ? "♦"
-                              : card.suit === "clubs"
-                              ? "♣"
-                              : "♠"}
-                          </span>
-                        </div>
-
-                        <div
-                          className={`text-2xl sm:text-3xl self-center font-bold ${
-                            isRedSuit ? "text-red-600" : "text-slate-900"
-                          }`}
-                        >
-                          {card.suit === "hearts"
-                            ? "♥"
-                            : card.suit === "diamonds"
-                            ? "♦"
-                            : card.suit === "clubs"
-                            ? "♣"
-                            : "♠"}
-                        </div>
-
-                        <div className="flex items-center justify-between w-full text-[10px] font-mono">
-                          <span className="text-blue-700 font-bold">+{card.chipValue}</span>
-                          <span className="text-slate-400 text-[8px] uppercase">{card.suit.slice(0, 3)}</span>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-
-              {/* ACTION BUTTONS & DECK INFO */}
-              <div className="w-full flex items-center justify-between max-w-2xl px-4 py-2">
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-                  <Layers className="w-4 h-4 text-slate-400" />
-                  <span>Deck: {deckCount} cards</span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="balatroRed"
-                    size="default"
-                    disabled={discards <= 0 || selectedIds.length === 0}
-                    onClick={discardSelected}
-                    className="text-xs sm:text-sm px-4"
-                  >
-                    DISCARD ({selectedIds.length})
-                  </Button>
-
-                  <Button
-                    variant="balatroBlue"
-                    size="default"
-                    disabled={hands <= 0 || selectedIds.length === 0}
-                    onClick={() => {
-                      // Hand evaluation triggered in Phase 3
-                    }}
-                    className="text-xs sm:text-sm px-6"
-                  >
-                    PLAY HAND ({selectedIds.length})
-                  </Button>
-                </div>
-              </div>
-            </div>
+            {/* MODULAR INTERACTIVE HAND VIEW (Card Rack, Manual Reorder, Discard & Play) */}
+            <HandView />
           </div>
         )}
+
+        {/* ROUND WON MODAL OVERLAY */}
+        <AnimatePresence>
+          {phase === "roundWon" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                className="max-w-md w-full p-6 rounded-2xl bg-slate-900 border-2 border-amber-500/80 shadow-2xl text-center flex flex-col items-center gap-4"
+              >
+                <div className="p-3 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  <Trophy className="w-10 h-10" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-amber-400 uppercase tracking-wider">
+                    Blind Defeated!
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    You beat the {blindType} blind with {formatNumber(roundScore)} points.
+                  </p>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-2 bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-sm">
+                  <div className="text-left text-slate-400">Target Score:</div>
+                  <div className="text-right font-mono font-bold text-slate-200">
+                    {formatNumber(targetScore)}
+                  </div>
+                  <div className="text-left text-slate-400">Total Scored:</div>
+                  <div className="text-right font-mono font-bold text-amber-400">
+                    {formatNumber(roundScore)}
+                  </div>
+                  <div className="text-left text-slate-400">Blind Reward:</div>
+                  <div className="text-right font-mono font-bold text-emerald-400">
+                    +${lastRoundBonus?.reward ?? (currentBlinds ? currentBlinds[blindType].reward : 3)}
+                  </div>
+                  <div className="text-left text-slate-400">Unused Hands:</div>
+                  <div className="text-right font-mono font-bold text-blue-400">
+                    +${lastRoundBonus?.handsBonus ?? hands}
+                  </div>
+                  <div className="text-left text-slate-400">Interest Earned:</div>
+                  <div className="text-right font-mono font-bold text-amber-400">
+                    +${lastRoundBonus?.interest ?? 0}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 w-full pt-1">
+                  <Button
+                    variant="balatroGold"
+                    size="lg"
+                    onClick={() => {
+                      soundEngine.playCashChime();
+                      openShop();
+                    }}
+                    className="w-full py-5 text-base font-black tracking-wider flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag className="w-5 h-5" /> VISIT SHOP
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      soundEngine.playCashChime();
+                      advanceToNextBlind();
+                    }}
+                    className="w-full py-2.5 text-xs text-slate-400 border-slate-700 hover:text-white"
+                  >
+                    Skip Shop & Next Blind &rarr;
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* ROUND LOST (GAME OVER) SCREEN */}
+        <AnimatePresence>
+          {phase === "roundLost" && <GameOverScreen />}
+        </AnimatePresence>
+
+        {/* RUN WON (VICTORY) CELEBRATION SCREEN */}
+        <AnimatePresence>
+          {phase === "gameWon" && <VictoryScreen />}
+        </AnimatePresence>
       </main>
-    </div>
+
+      {/* Boss Blind Crimson Ambient Screen Tint */}
+      {blindType === "boss" && phase === "playing" && (
+        <div className="fixed inset-0 pointer-events-none bg-red-950/15 mix-blend-color-burn z-10" />
+      )}
+    </motion.div>
   );
 }
