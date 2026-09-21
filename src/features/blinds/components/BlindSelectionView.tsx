@@ -13,6 +13,7 @@ import {
   Play,
   Coins,
   ShieldAlert,
+  CheckCircle2,
 } from "lucide-react";
 
 export const BlindSelectionView = memo(function BlindSelectionView() {
@@ -58,7 +59,9 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className={`rounded-2xl border-2 ${
-            small.isDefeated || small.isSkipped
+            small.isDefeated
+              ? "border-emerald-500/40 bg-emerald-950/20 opacity-80"
+              : small.isSkipped
               ? "border-slate-800 bg-slate-950/40 opacity-50"
               : activeBlindType === "small"
               ? "border-blue-500 bg-gradient-to-b from-blue-950/70 to-slate-950 shadow-2xl shadow-blue-500/20"
@@ -106,8 +109,8 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
 
           <div className="flex flex-col gap-2 pt-6">
             {small.isDefeated ? (
-              <Badge className="w-full py-2 justify-center bg-blue-950 text-blue-400 border border-blue-500/40 font-bold text-xs">
-                DEFEATED
+              <Badge className="w-full py-2.5 justify-center bg-emerald-950/90 text-emerald-300 border border-emerald-500/60 font-black text-xs tracking-wider flex items-center gap-1.5 shadow-sm shadow-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> VICTORY
               </Badge>
             ) : small.isSkipped ? (
               <Badge className="w-full py-2 justify-center bg-slate-900 text-slate-500 border border-slate-800 font-bold text-xs">
@@ -151,7 +154,9 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className={`rounded-2xl border-2 ${
-            big.isDefeated || big.isSkipped
+            big.isDefeated
+              ? "border-emerald-500/40 bg-emerald-950/20 opacity-80"
+              : big.isSkipped
               ? "border-slate-800 bg-slate-950/40 opacity-50"
               : activeBlindType === "big"
               ? "border-amber-500 bg-gradient-to-b from-amber-950/70 to-slate-950 shadow-2xl shadow-amber-500/20"
@@ -199,8 +204,8 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
 
           <div className="flex flex-col gap-2 pt-6">
             {big.isDefeated ? (
-              <Badge className="w-full py-2 justify-center bg-amber-950 text-amber-400 border border-amber-500/40 font-bold text-xs">
-                DEFEATED
+              <Badge className="w-full py-2.5 justify-center bg-emerald-950/90 text-emerald-300 border border-emerald-500/60 font-black text-xs tracking-wider flex items-center gap-1.5 shadow-sm shadow-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> VICTORY
               </Badge>
             ) : big.isSkipped ? (
               <Badge className="w-full py-2 justify-center bg-slate-900 text-slate-500 border border-slate-800 font-bold text-xs">
@@ -245,7 +250,7 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
           transition={{ delay: 0.15 }}
           className={`rounded-2xl border-2 ${
             boss.isDefeated
-              ? "border-slate-800 bg-slate-950/40 opacity-50"
+              ? "border-emerald-500/40 bg-emerald-950/20 opacity-80"
               : "border-red-500/90 bg-gradient-to-b from-red-950/80 via-slate-950 to-slate-950 shadow-2xl shadow-red-500/30"
           } p-5 flex flex-col justify-between text-center relative overflow-hidden backdrop-blur-md`}
         >
@@ -285,8 +290,8 @@ export const BlindSelectionView = memo(function BlindSelectionView() {
 
           <div className="flex flex-col gap-2 pt-6">
             {boss.isDefeated ? (
-              <Badge className="w-full py-2 justify-center bg-red-950 text-red-400 border border-red-500/40 font-bold text-xs">
-                DEFEATED
+              <Badge className="w-full py-2.5 justify-center bg-emerald-950/90 text-emerald-300 border border-emerald-500/60 font-black text-xs tracking-wider flex items-center gap-1.5 shadow-sm shadow-emerald-500/20">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> VICTORY
               </Badge>
             ) : (
               <Button
