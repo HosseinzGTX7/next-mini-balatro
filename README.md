@@ -5,7 +5,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict_Mode-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Zustand](https://img.shields.io/badge/Zustand-Slice_Store-orange?style=flat-square)](https://github.com/pmndrs/zustand)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-4.3-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
 [![Zod](https://img.shields.io/badge/Zod-Validated_Schemas-3E67B1?style=flat-square&logo=zod)](https://zod.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
@@ -65,7 +65,7 @@
 | **Language** | TypeScript (Strict Mode) | Zero `any`, strict null checks, full type safety |
 | **State Management** | Zustand (v5) | Modular slice architecture (`gameSlice`, `scoreSlice`, `jokerSlice`, `shopSlice`) |
 | **UI Primitives** | shadcn/ui & Radix UI | Accessible headless dialogs, badges, tooltips, buttons |
-| **Styling** | Tailwind CSS (v3) | Custom Balatro color tokens, CRT effects, poker felt |
+| **Styling** | Tailwind CSS (v4) | CSS-first architecture, @theme design tokens, CRT effects, poker felt |
 | **Validation** | Zod (v3) | Runtime schema validation and static inferred types |
 | **Animations** | Framer Motion (v12) | GPU-accelerated spring animations, 3D card tilt |
 | **Audio** | Web Audio API | Zero external audio asset overhead, procedural retro synthesis |
